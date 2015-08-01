@@ -1,0 +1,4 @@
+# PyCharm files
+.idea
+*.pkl
+__pycache__/
