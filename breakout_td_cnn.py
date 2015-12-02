@@ -1,139 +1,80 @@
 __author__ = 'Ben'
-
-from libs.ale_python_interface import ALEInterface
 import matplotlib.pyplot as plt
-import numpy as np
 import time
-from handlers import *
-from scipy.misc import imresize
-import theano
-from nns import CNN
-
-plt.ion()
-ale = ALEInterface(True)
-
-ale.loadROM(b'd:\_code\\breakout.bin')
-
-(screen_width, screen_height) = ale.getScreenDims()
-legal_actions = ale.getMinimalActionSet()
-
-experienceReplay = True
-expEpoch = 200
-expMiniBatch = 10
-discount = 1
-histNumSeconds = 2
+import pickle
+import lasagne
+from nns import *
+from handlers.breakouthandler import BreakoutHandler
+from handlers import ActionHandler, ActionPolicy, ExperienceHandler, TDHandler
+from libs.ale_python_interface import ALEInterface
+from functools import partial
+import os
+import copy
+# 73 space invaders 57 breakout 5 beamrider
+rom = b'D:\\_code\\breakout.bin'
+gamename = 'break'
 skipFrame = 4
-
-actionHandler = ActionHandler(ActionPolicy.eGreedy, (1, 0.1, 200), legal_actions)
-historyHandler = HistoryHandler(60*histNumSeconds)
-expHandler = ExperienceHandler(1500)
-
-costList = list()
+numActions = 3
+randVals = (0.01, 0.01, 250)  # starting at 1 anneal eGreedy policy to 0.1 over 1000 games
+expHandler = TDHandler(32, 0.5, 1000000/skipFrame, numActions, None)
+breakoutHandler = BreakoutHandler(rom, False, randVals, expHandler, skipFrame)
+cnn = CNN((None, skipFrame, 86, 80), numActions, .1)
 scoreList = list()
-lives = 5
+validLossList = list()
+bestTotReward = -np.inf
 
-cnn = CNN()
-
-def train_reward(reward):
-    cost = 0
-    currentReward = reward
-
-    lastKeys, lastActions = historyHandler.getKeysActions()
-    lastKeys = np.asarray(lastKeys, dtype=theano.config.floatX)
-    lastActions = np.asarray(lastActions, dtype=int)
-    rewVec = list()
-    for x in range(len(lastKeys)):
-        rewVec.append(currentReward)
-        currentReward *= discount
-    rewVec = np.asarray(rewVec, dtype=theano.config.floatX)
-    rp = np.random.permutation(len(lastKeys))
-    for ind in range(int(len(rp)/expMiniBatch)):
-        choice = rp[ind*expMiniBatch:(ind*expMiniBatch)+expMiniBatch]
-        key = lastKeys[choice]
-        action = lastActions[choice]
-        actionArange = [np.arange(expMiniBatch), action]
-        rewVal = np.zeros((expMiniBatch, actionHandler.numActions), dtype=theano.config.floatX)
-        rewVal[actionArange[0], actionArange[1]] = rewVec[choice]
-        mask = np.zeros(rewVal.shape, dtype=theano.config.floatX)
-        nonZero = np.where(rewVal != 0)
-        mask[nonZero[0], nonZero[1]] = 1
-        cost += cnn.train(key, rewVal, mask)
-
-        expHandler.addExperience(key, rewVal)
-    # print(cost)
-    # costList.append(cost)
-    historyHandler.reset()
-
-
-def train_exp():
-    cost = 0
-    for x in range(expEpoch):
-        keys, actions, isgood = expHandler.getRandomExperience()
-        if isgood:
-            mask = np.zeros(actions.shape, dtype=theano.config.floatX)
-            nonZero = np.where(actions != 0)
-            mask[nonZero[0], nonZero[1]] = 1
-            cost = cnn.train(keys, actions, mask)
-
-    print(cost/expEpoch)
-    costList.append(cost/expEpoch)
-
-frameCount = 0
 st = time.time()
-for episode in range(200):
-    total_reward = 0.0
-    while not ale.game_over():
+for episode in range(1000):
+    # this will run one full game, training every 4 frames
+    total_reward = breakoutHandler.runOneGame(expHandler.addToBuffer, cnn.get_output, 5, 57, train=False, negReward=True)
+    scoreList.append(total_reward)
+    expHandler.processTD(-1)
 
-        frames = list()
-        reward = 0
-        for frame in range(skipFrame):
-            gamescreen = ale.getScreenRGB()
-            processedImg = np.asarray(imresize(gamescreen.view(np.uint8).reshape(screen_height, screen_width, 4)[:, :, 0], 0.5, interp='nearest'), dtype=theano.config.floatX)/255
-            frames.append(processedImg)
+    # if this is the best score save it as such
+    if total_reward > bestTotReward:
+        parms = lasagne.layers.get_all_param_values(cnn.l_out)
+        #parms2 = lasagne.layers.get_all_param_values(cnn.e_out)
+        pickle.dump(parms, open(os.getcwd()+'\saves\\'+gamename+'cnn_stride_tdbest{0}_0.002.pkl'.format(total_reward), 'wb'))
+        bestTotReward = total_reward
+    # plot cost and score
+    plt.clf()
+    plt.subplot(1, 2, 1)
+    plt.plot(expHandler.costList, '.')
+    plt.subplot(1, 2, 2)
+    sl = np.asarray(scoreList)
+    plt.plot(sl, '.')
+    # plt.subplot(1, 3, 3)
+    # plt.plot(validLossList)
+    plt.pause(0.01)
+    expHandler.flushBuffer()
 
-            performedAction, actionInd = actionHandler.getLastAction()
-            rew = ale.act(performedAction)
-            if rew > 0:
-                reward += 1
+    # uncomment to save network parameters
+    if episode % 10 == 0:
+        parms = lasagne.layers.get_all_param_values(cnn.l_out)
+        #parms2 = lasagne.layers.get_all_param_values(cnn.e_out)
+        pickle.dump(parms, open(os.getcwd()+'\saves\\'+gamename+'cnn_stride_td{0}_0.002.pkl'.format(episode), 'wb'))
 
-            ram = ale.getRAM()
-            if ram[57] != lives:
-                reward -= 1
-                lives = ram[57]
-
-        frames = np.asarray(frames)
-
-        # add relevant information to history handler
-        historyHandler.add(frames, actionInd)
-
-        if reward != 0:
-            train_reward(reward)
-
-        actionVect = cnn.get_output(frames.reshape((1, skipFrame, 105, 80)))[0]
-
-        actionHandler.setAction(actionVect)
-
-        total_reward += reward
-        frameCount += 1*skipFrame
-
-    ale.reset_game()
-    actionHandler.gameOver()
-    historyHandler.addPScore(total_reward)
-    lives = 5
-    historyHandler.reset()
-
-    # train_exp()
-    #
-    # plt.clf()
-    # plt.subplot(1,2,1)
-    # plt.plot(costList)
-    # plt.subplot(1,2,2)
-    # plt.plot(historyHandler.pScoreList)
-    # plt.pause(0.1)
-    #
+    et = time.time()
     print("Episode " + str(episode) + " ended with score: " + str(total_reward))
+    print('Total Time:', et-st, 'Frame Count:', breakoutHandler.frameCount, 'FPS:', breakoutHandler.frameCount/(et-st))
 
-# episodes over
-et = time.time()
-print(et-st, frameCount/(et-st))
+    #
+    # if episode % 2 == 0:
+    ttt = 0
+    vtt = 0
+    for ep in range(50):
+        tst = time.time()
+        breakoutHandler.expHandler.train_exp(cnn)
+        tet = time.time()
+        ttt += tet-tst
+    vst = time.time()
+    # validLossList.append(breakoutHandler.expHandler.validation(cnn))
+    vet = time.time()
+    vtt += vet-vst
+    print(ttt,vtt)
 
+plt.ioff()
+plt.show()
+parms = lasagne.layers.get_all_param_values(cnn.l_out)
+with open(os.getcwd() + '\saves\\'+gamename+'cnn_stride_td{0}_0.002.pkl'.format(episode+1), 'wb') as fin:
+    pickle.dump(parms, fin)
