@@ -1,47 +1,51 @@
 __author__ = 'Ben'
 import numpy as np
 import theano
+import handlers.experiencehandler as exph
+import copy
 
 
-class ExperienceHandler:
-    def __init__(self, miniBatch, discount, maxLen, numActions):
-        self.states = list()
-        self.rewards = list()
-        self.actions = list()
-        self.costList = list()
-        self.maxLen = maxLen
-        self.miniBatch = miniBatch
-        self.discount = discount
-        self.numActions = numActions
+class TDHandler(exph.ExperienceHandler):
+    def __init__(self, miniBatch, discount, maxLen, numActions, bufferLen):
+        super().__init__(miniBatch, discount, maxLen, numActions)
+        self.bufferLen = bufferLen
+        self.bufStates = list()
+        self.bufRewards = list()
+        self.bufActions = list()
 
-    def addExperience(self, state, action, reward):
-        self.states.append(state)
-        self.actions.append(action)
-        self.rewards.append(reward)
-        if len(self.states) > self.maxLen:
+    def addToBuffer(self, state, action, reward):
+        self.bufStates.append(state)
+        self.bufActions.append(action)
+        self.bufRewards.append(0)
+
+        if reward != 0:
+            self.processTD(reward)
+
+        # if len(self.bufStates) > self.bufferLen and len(self.bufRewards) > self.bufferLen and len(self.bufActions) > self.bufferLen:
+        #     self.addExperience(self.bufStates[0], self.bufActions[0], self.bufRewards[0])
+        #     self.bufStates.remove(self.bufStates[0])
+        #     self.bufRewards.remove(self.bufRewards[0])
+        #     self.bufActions.remove(self.bufActions[0])
+
+    def processTD(self, reward):
+        for revInd in range(len(self.bufRewards)-1, 0, -1):
+            self.bufRewards[revInd] += reward
+            reward *= self.discount
+
+    def flushBuffer(self):
+        self.states.extend(copy.copy(self.bufStates))
+        self.actions.extend(copy.copy(self.bufActions))
+        self.rewards.extend(copy.copy(self.bufRewards))
+        self.bufStates.clear()
+        self.bufRewards.clear()
+        self.bufActions.clear()
+
+        while len(self.states) > self.maxLen:
             del self.states[0]
-
-        if len(self.rewards) > self.maxLen:
-            del self.rewards[0]
-
-        if len(self.actions) > self.maxLen:
+        while len(self.actions) > self.maxLen:
             del self.actions[0]
-
-    def getRandomExperience(self):
-        if len(self.states) <= self.miniBatch:
-            return None, None, None, None, 0
-
-        rp = np.random.permutation(len(self.states)-1)
-        state = list()
-        action = list()
-        reward = list()
-        state_tp1 = list()
-        for exp in range(self.miniBatch):
-            state.append(self.states[rp[exp]])
-            action.append(self.actions[rp[exp]])
-            reward.append(self.rewards[rp[exp]])
-            state_tp1.append(self.states[rp[exp]+1])
-        return state, action, reward, state_tp1, 1
+        while len(self.rewards) > self.maxLen:
+            del self.rewards[0]
 
     def train_exp(self, cnn):
         cost = 0
@@ -55,8 +59,9 @@ class ExperienceHandler:
             state_tp1s = np.asarray(state_tp1s, dtype=theano.config.floatX)
 
             nonTerm = np.where(rewards == 0)
-            r_tp1 = cnn.get_output(state_tp1s[nonTerm[0]])
-            rewards[nonTerm[0]] = np.max(r_tp1, axis=1)*self.discount
+            if nonTerm[0].size > 0:
+                r_tp1 = cnn.get_output(state_tp1s[nonTerm[0]].reshape((-1,) + state_tp1s.shape[1:]))
+                rewards[nonTerm[0]] = np.max(r_tp1, axis=1)*self.discount
 
             rewVals = np.zeros((self.miniBatch, self.numActions), dtype=theano.config.floatX)
             arange = np.arange(self.miniBatch)
@@ -124,7 +129,7 @@ class ExperienceHandler:
     def validation(self, cnn):
         # find values for rewards that are not zero
         rewards = np.asarray(self.rewards)
-        non_zero_rew = np.where(rewards > 0)[0]
+        non_zero_rew = np.where(abs(rewards) >= 1)[0]
         if len(non_zero_rew) > 1000:
             rp = np.random.permutation(non_zero_rew)
             non_zero_rew = rp[0:1000]
@@ -154,20 +159,21 @@ import unittest
 
 
 class TestExperienceHandler(unittest.TestCase):
-    def test_validation(self):
-        expHandler = self.getExpHandler(100)
-        class dummy:
-            def get_output(self, x):
-                return np.random.randn(x.shape[0], 7)
-        expHandler.validation(dummy())
+    def test_td(self):
+        expHandler = self.getExpHandler(101)
+        assert len(expHandler.bufRewards) == 0
+        assert expHandler.rewards[-1] == 1
+        assert expHandler.rewards[-2] == 1*expHandler.discount
 
     def getExpHandler(self, numDataToGet):
-        expHandler = ExperienceHandler(32, 0.95, 1000, 7)
+        expHandler = TDHandler(32, 0.95, 1000, 7, 16)
         for i in range(numDataToGet):
             states = np.random.random((4, 105, 80))
-            rewards = np.random.randint(0, 2)
+            rewards = 0
+            if i % 10 == 0 and i > 0:
+                rewards = 1
             actions = np.random.randint(0, 7)
-            expHandler.addExperience(states, actions, rewards)
+            expHandler.addToBuffer(states, actions, rewards)
         return expHandler
 
 if __name__ == '__main__':

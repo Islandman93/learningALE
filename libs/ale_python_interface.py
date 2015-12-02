@@ -7,11 +7,11 @@ from ctypes import cdll
 import numpy as np
 from numpy.ctypeslib import as_ctypes
 import os
-
-os.chdir(os.getcwd() + '\libs')
+cwd = os.getcwd()
+os.chdir(cwd + '\libs')
 
 ale_lib = cdll.LoadLibrary('ALE.dll')
-
+os.chdir(cwd)
 class ALEInterface(object):
     def __init__(self, display=False):
         self.obj = ale_lib.ALE_new(display)

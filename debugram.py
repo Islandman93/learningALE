@@ -6,7 +6,7 @@ import time
 
 ale = ALEInterface(True)
 
-ale.loadROM(b'd:\_code\_reinforcementlearning\\breakout.bin')
+ale.loadROM(b'D:\\_code\\beam_rider.bin')
 
 (screen_width, screen_height) = ale.getScreenDims()
 legal_actions = ale.getLegalActionSet()
@@ -20,7 +20,7 @@ for episode in range(1):
         a = legal_actions[np.random.randint(legal_actions.size)]
         ram = ale.getRAM()
         ramlist.append(ram)
-        print(ram[57])
+        print(ram[0], ram[3], ram[5], ram[47], ram[48])
         reward = ale.act(a)
         total_reward += reward
         frameCount += 1
@@ -31,6 +31,13 @@ print(et-st, frameCount/(et-st))
 
 import matplotlib.pyplot as plt
 ramarray = np.asarray(ramlist)
+w = np.where(ramarray > 3)[1]
+ramarray[:, w] = 0
+plt.plot(ramarray)
+
+notZ = np.where(ramarray != 0)[1]
+unqNZ = np.unique(notZ)
+print(unqNZ)
 
 # lastram = ramarray[0]
 # ind = np.ones(ramarray.shape[1], dtype=int)
