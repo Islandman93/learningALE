@@ -1,74 +1,39 @@
-.. image:: http://img.shields.io/badge/docs-latest-brightgreen.svg
-    :target: http://lasagne.readthedocs.org/en/latest/
-
-.. image:: https://travis-ci.org/Lasagne/Lasagne.svg?branch=master
-    :target: https://travis-ci.org/Lasagne/Lasagne
-
-.. image:: https://img.shields.io/coveralls/Lasagne/Lasagne.svg
-    :target: https://coveralls.io/r/Lasagne/Lasagne
-
-.. image:: https://img.shields.io/badge/license-MIT-blue.svg
-    :target: https://github.com/Lasagne/Lasagne/blob/master/LICENSE
-
-.. image:: https://zenodo.org/badge/16974/Lasagne/Lasagne.svg
-   :target: https://zenodo.org/badge/latestdoi/16974/Lasagne/Lasagne
-
 learningALE
 ===========
 
-Lasagne is a lightweight library to build and train neural networks in Theano.
-Its main features are:
+learningALE is meant to be an easy to use collection of tools and helpers for integration of learners into the
+`Arcade Learning Evironment <https://github.com/mgbellemare/Arcade-Learning-Environment>`_. There have been a ton
+of new papers about DQN and all it's variants but no combined place or package to quickly implement and test. That is
+the main purpose of this library.
 
-* Supports feed-forward networks such as Convolutional Neural Networks (CNNs),
-  recurrent networks including Long Short-Term Memory (LSTM), and any
-  combination thereof
-* Allows architectures of multiple inputs and multiple outputs, including
-  auxiliary classifiers
-* Many optimization methods including Nesterov momentum, RMSprop and ADAM
-* Freely definable cost function and no need to derive gradients due to
-  Theano's symbolic differentiation
-* Transparent support of CPUs and GPUs due to Theano's expression compiler
+There are two things I believe are fundamental to this project:
+1. Prevent over-optimization. Speed is useful but it's important to be flexible and most importantly be easy to create
+new learners that have full access to all needed variables/objects/game state/etc.
 
-Its design is governed by `six principles
-<http://lasagne.readthedocs.org/en/latest/user/development.html#philosophy>`_:
-
-* Simplicity: Be easy to use, easy to understand and easy to extend, to
-  facilitate use in research
-* Transparency: Do not hide Theano behind abstractions, directly process and
-  return Theano expressions or Python / numpy data types
-* Modularity: Allow all parts (layers, regularizers, optimizers, ...) to be
-  used independently of Lasagne
-* Pragmatism: Make common use cases easy, do not overrate uncommon cases
-* Restraint: Do not obstruct users with features they decide not to use
-* Focus: "Do one thing and do it well"
+2. Some of these algorithms can be very complex. Code must be commented, documented, and be easily readable.
 
 
-Installation
+Requirements
 ------------
 
-In short, you can install a known compatible version of Theano and the latest
-Lasagne development version via:
+Standard scientific packages needed: numpy, scipy, matplotlib.
 
-.. code-block:: bash
+Neural net specific packages: `Theano <https://github.com/Theano/Theano>`_. and
+`Lasagne <https://github.com/Lasagne/Lasagne>`_.
 
-  pip install -r https://raw.githubusercontent.com/Lasagne/Lasagne/master/requirements.txt
-  pip install https://github.com/Lasagne/Lasagne/archive/master.zip
-
-For more details and alternatives, please see the `Installation instructions
-<http://lasagne.readthedocs.org/en/latest/user/installation.html>`_.
-
+If you're using Windows and need help installing theano check out my blog post at
+http://www.islandman93.com/2015/04/tutorial-python-34-theano-and-windows-7.html
 
 Documentation
 -------------
 
-Documentation is available online: http://lasagne.readthedocs.org/
+Documentation is available online: read the docs comming soon
 
-For support, please refer to the `lasagne-users mailing list
-<https://groups.google.com/forum/#!forum/lasagne-users>`_.
+For support, please email islandman93 at gmail.
 
 
-Example
--------
+Example DQN Learner
+-------------------
 
 .. code-block:: python
 
@@ -127,16 +92,17 @@ Example
     # save
     learner.save('dqn{0}.pkl'.format(episode+1))
 
-For a reproduction of the first DQN paper, see `experiments/reproduction/DQN_Original <experiments/reproduction/DQN_Original/breakout_dqn.py>`_,
+For a full reproduction of the first DQN paper, see
+`experiments/reproduction/DQN_Original <experiments/reproduction/DQN_Original/breakout_dqn.py>`_,
 
 
 Development
 -----------
 
-Lasagne is a work in progress, input is welcome.
+This project is by no means finished and will constantly improve as I have time to work on it. I readily accept pull
+requests, and will try to fix issues when they come up.
 
-Please see the `Contribution instructions
-<http://lasagne.readthedocs.org/en/latest/user/development.html>`_ for details
-on how you can contribute!
+I'm still pretty new to github, docs, and python tests. I welcome refactoring, advice on folder structure and file
+formats.
 
-README lovingly edited from https://github.com/Lasagne/Lasagne
+README lovingly edited from https://github.com/Lasagne/Lasagne without that project this one wouldn't be possible.
