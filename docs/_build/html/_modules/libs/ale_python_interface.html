@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>libs.ale_python_interface &mdash; learningALE 0.1.alpha documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.alpha',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="learningALE 0.1.alpha documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">learningALE 0.1.alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for libs.ale_python_interface</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; ale_python_interface.py</span>
+<span class="sd">Author: Ben Goodrich</span>
+<span class="sd">This directly implements a python version of the arcade learning environment interface.</span>
+<span class="sd">For linux: It requires the C wrapper library to be built and on shared object path, as &quot;ale_c_wrapper.so&quot;</span>
+<span class="sd">For windows: It requires ALE.dll in the learningALE/libs path</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="n">cdll</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">numpy.ctypeslib</span> <span class="kn">import</span> <span class="n">as_ctypes</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s">&#39;../learningALE/libs&#39;</span><span class="p">))</span>
+
+<span class="n">ale_lib</span> <span class="o">=</span> <span class="n">cdll</span><span class="o">.</span><span class="n">LoadLibrary</span><span class="p">(</span><span class="s">&#39;ALE.dll&#39;</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ALEInterface"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface">[docs]</a><span class="k">class</span> <span class="nc">ALEInterface</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">display</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">ALE_new</span><span class="p">(</span><span class="n">display</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ALEInterface.getString"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getString">[docs]</a>    <span class="k">def</span> <span class="nf">getString</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getString</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">)</span></div>
+<div class="viewcode-block" id="ALEInterface.getInt"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getInt">[docs]</a>    <span class="k">def</span> <span class="nf">getInt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getInt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">)</span></div>
+<div class="viewcode-block" id="ALEInterface.getBool"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getBool">[docs]</a>    <span class="k">def</span> <span class="nf">getBool</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getBool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">)</span></div>
+<div class="viewcode-block" id="ALEInterface.getFloat"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getFloat">[docs]</a>    <span class="k">def</span> <span class="nf">getFloat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getFloat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.set"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.set">[docs]</a>    <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">ale_lib</span><span class="o">.</span><span class="n">setString</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">ale_lib</span><span class="o">.</span><span class="n">setInt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">):</span>
+            <span class="n">ale_lib</span><span class="o">.</span><span class="n">setBool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">elif</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">ale_lib</span><span class="o">.</span><span class="n">setFloar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">key</span><span class="p">,</span><span class="n">value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.loadROM"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.loadROM">[docs]</a>    <span class="k">def</span> <span class="nf">loadROM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rom_file</span><span class="p">):</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">loadROM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span> <span class="n">rom_file</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.act"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.act">[docs]</a>    <span class="k">def</span> <span class="nf">act</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">action</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="nb">int</span><span class="p">(</span><span class="n">action</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.game_over"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.game_over">[docs]</a>    <span class="k">def</span> <span class="nf">game_over</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">game_over</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.reset_game"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.reset_game">[docs]</a>    <span class="k">def</span> <span class="nf">reset_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">reset_game</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getLegalActionSet"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getLegalActionSet">[docs]</a>    <span class="k">def</span> <span class="nf">getLegalActionSet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">act_size</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getLegalActionSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+        <span class="n">act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">act_size</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">getLegalActionSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">as_ctypes</span><span class="p">(</span><span class="n">act</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">act</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getMinimalActionSet"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getMinimalActionSet">[docs]</a>    <span class="k">def</span> <span class="nf">getMinimalActionSet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">act_size</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getMinimalActionSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+        <span class="n">act</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">act_size</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">getMinimalActionSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">as_ctypes</span><span class="p">(</span><span class="n">act</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">act</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getFrameNumber"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getFrameNumber">[docs]</a>    <span class="k">def</span> <span class="nf">getFrameNumber</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getFrameNumber</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getEpisodeFrameNumber"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getEpisodeFrameNumber">[docs]</a>    <span class="k">def</span> <span class="nf">getEpisodeFrameNumber</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getEpisodeFrameNumber</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getScreenDims"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getScreenDims">[docs]</a>    <span class="k">def</span> <span class="nf">getScreenDims</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;returns a tuple that contains (screen_width,screen_height)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenWidth</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenHeight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">width</span><span class="p">,</span><span class="n">height</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ALEInterface.getScreen"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getScreen">[docs]</a>    <span class="k">def</span> <span class="nf">getScreen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">screen_data</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This function fills screen_data with the RAW Pixel data</span>
+<span class="sd">        screen_data MUST be a numpy array of uint8/int8. This could be initialized like so:</span>
+<span class="sd">        screen_data = np.array(w*h,dtype=np.uint8)</span>
+<span class="sd">        Notice, it must be width*height in size also</span>
+<span class="sd">        If it is None, then this function will initialize it</span>
+<span class="sd">        Note: This is the raw pixel values from the atari, before any RGB palette transformation takes place</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">screen_data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenWidth</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenHeight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">screen_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">width</span><span class="o">*</span><span class="n">height</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">as_ctypes</span><span class="p">(</span><span class="n">screen_data</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">screen_data</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getScreenRGB"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getScreenRGB">[docs]</a>    <span class="k">def</span> <span class="nf">getScreenRGB</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">screen_data</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This function fills screen_data with the data</span>
+<span class="sd">        screen_data MUST be a numpy array of uint32/int32. This can be initialized like so:</span>
+<span class="sd">        screen_data = np.array(w*h,dtype=np.uint32)</span>
+<span class="sd">        Notice, it must be width*height in size also</span>
+<span class="sd">        If it is None, then this function will initialize it</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">screen_data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenWidth</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">height</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenHeight</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">screen_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">width</span><span class="o">*</span><span class="n">height</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">getScreenRGB</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">as_ctypes</span><span class="p">(</span><span class="n">screen_data</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">screen_data</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getRAMSize"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getRAMSize">[docs]</a>    <span class="k">def</span> <span class="nf">getRAMSize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getRAMSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ALEInterface.getRAM"><a class="viewcode-back" href="../../libs.html#libs.ale_python_interface.ALEInterface.getRAM">[docs]</a>    <span class="k">def</span> <span class="nf">getRAM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ram</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This function grabs the atari RAM.</span>
+<span class="sd">        ram MUST be a numpy array of uint8/int8. This can be initialized like so:</span>
+<span class="sd">        ram = np.array(ram_size,dtype=uint8)</span>
+<span class="sd">        Notice: It must be ram_size where ram_size can be retrieved via the getRAMSize function.</span>
+<span class="sd">        If it is None, then this function will initialize it.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">ram</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">ram_size</span> <span class="o">=</span> <span class="n">ale_lib</span><span class="o">.</span><span class="n">getRAMSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">ram</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">ram_size</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">getRAM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">,</span><span class="n">as_ctypes</span><span class="p">(</span><span class="n">ram</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">ram</span>
+</div>
+    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ale_lib</span><span class="o">.</span><span class="n">ALE_del</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">obj</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">learningALE 0.1.alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, IslandMan93.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

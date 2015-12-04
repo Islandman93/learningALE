@@ -1,0 +1,314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>handlers.gamehandler &mdash; learningALE 0.1.alpha documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1.alpha',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="learningALE 0.1.alpha documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">learningALE 0.1.alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for handlers.gamehandler</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.misc</span> <span class="kn">import</span> <span class="n">imresize</span>
+<span class="kn">from</span> <span class="nn">learningALE.libs.ale_python_interface</span> <span class="kn">import</span> <span class="n">ALEInterface</span>
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Ben&#39;</span>
+
+
+<div class="viewcode-block" id="GameHandler"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandler">[docs]</a><span class="k">class</span> <span class="nc">GameHandler</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The :class:`GameHandler` class takes care of the interface between the ALE and the learner.</span>
+
+<span class="sd">    Currently supported is the ability to display the ALE screen when running, skip x number of frames by repeating the</span>
+<span class="sd">    last action, and configuring the dtype to convert the gamescreen to (default is float16 for space).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rom : byte string</span>
+<span class="sd">        Specifies the directory to load the rom from. Must be a byte string: b&#39;dir_for_rom/rom.bin&#39;</span>
+<span class="sd">    show_rom : boolean</span>
+<span class="sd">        Whether or not to show the game being played or not. True takes longer to run but can be fun to watch</span>
+<span class="sd">    learner : :class:`learners.learner`</span>
+<span class="sd">        The learner, on construction GameHandler will call set_legal_actions</span>
+<span class="sd">    skip_frame : int</span>
+<span class="sd">        Number of frames to skip using the last action chosen</span>
+<span class="sd">    dtype : data type</span>
+<span class="sd">        Specifies the data type to convert the game screen to. Default is np.float16</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rom</span><span class="p">,</span> <span class="n">show_rom</span><span class="p">,</span> <span class="n">learner</span><span class="p">,</span> <span class="n">skip_frame</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">):</span>
+        <span class="c"># set up emulator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ale</span> <span class="o">=</span> <span class="n">ALEInterface</span><span class="p">(</span><span class="n">show_rom</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">loadROM</span><span class="p">(</span><span class="n">rom</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">screen_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_height</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getScreenDims</span><span class="p">()</span>
+        <span class="n">legal_actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getMinimalActionSet</span><span class="p">()</span>
+
+        <span class="c"># set up vars</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span> <span class="o">=</span> <span class="n">skip_frame</span>
+
+        <span class="n">learner</span><span class="o">.</span><span class="n">set_legal_actions</span><span class="p">(</span><span class="n">legal_actions</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">frameCount</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">dtype</span>
+
+<div class="viewcode-block" id="GameHandler.run_one_game"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandler.run_one_game">[docs]</a>    <span class="k">def</span> <span class="nf">run_one_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">learner</span><span class="p">,</span> <span class="n">lives</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">life_ram_ind</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs a full game. If lives and life_ram_ind are set then will give negative rewards on loss of life</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        learner : :class:`learners.learner`</span>
+<span class="sd">            Will call get_game_action and frames_processed.</span>
+<span class="sd">            get_game_action must return a valid ALE action ind. add_experience can be a pass.</span>
+
+<span class="sd">        lives : int</span>
+<span class="sd">            Number of lives at start of game. Default None</span>
+
+<span class="sd">        life_ram_ind : int</span>
+<span class="sd">            Ram index of where the current lives are stored</span>
+
+<span class="sd">        early_return : bool</span>
+<span class="sd">            If set to true and lives/life_ram_ind are set then will return on first loss of life</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Total reward from game. Can be negative if lives/life_ram_ind is set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># if lives and life_ram_ind is specified set negative reward to true</span>
+        <span class="k">if</span> <span class="n">lives</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">life_ram_ind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">neg_reward</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">neg_reward</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="n">total_reward</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">reset_game</span><span class="p">()</span>
+        <span class="n">action_to_perform</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c"># initially set at zero because we start the game before asking the learner</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">game_over</span><span class="p">():</span>
+            <span class="c"># get frames</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="n">reward</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c"># loop over skip frame</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span><span class="p">):</span>
+                <span class="n">gamescreen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getScreenRGB</span><span class="p">()</span>
+
+                <span class="c"># convert ALE gamescreen into usable image, scaled between 0 and 1</span>
+                <span class="n">processedImg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                    <span class="n">imresize</span><span class="p">(</span><span class="n">gamescreen</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">screen_height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">screen_width</span><span class="p">,</span> <span class="mi">4</span><span class="p">)[</span><span class="mi">25</span><span class="p">:</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">interp</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">),</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">/</span><span class="mi">255</span>
+                <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">processedImg</span><span class="p">)</span>
+
+                <span class="c"># act on the action to perform, should be ALE compatible action ind</span>
+                <span class="n">rew</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="n">action_to_perform</span><span class="p">)</span>
+
+                <span class="c"># clip positive rewards to 1</span>
+                <span class="k">if</span> <span class="n">rew</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reward</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="c"># if allowing negative rewards, get RAM and see if lives has decreased</span>
+                <span class="k">if</span> <span class="n">neg_reward</span><span class="p">:</span>
+                    <span class="n">ram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getRAM</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lives</span><span class="p">:</span>
+                        <span class="n">reward</span> <span class="o">-=</span> <span class="mi">1</span>  <span class="c"># losing a life is a negative 1 reward</span>
+                        <span class="n">lives</span> <span class="o">=</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span>
+
+            <span class="c"># end frame skip loop</span>
+
+            <span class="n">total_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+
+            <span class="c"># frames_processed must be here before action_to_perform gets overwritten.</span>
+            <span class="n">learner</span><span class="o">.</span><span class="n">frames_processed</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">action_to_perform</span><span class="p">,</span> <span class="n">reward</span><span class="p">)</span>
+
+            <span class="n">action_to_perform</span> <span class="o">=</span> <span class="n">learner</span><span class="o">.</span><span class="n">get_game_action</span><span class="p">(</span><span class="n">frames</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span><span class="p">,</span> <span class="n">frames</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">80</span><span class="p">)))</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">frameCount</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span>
+
+            <span class="c"># if doing early return, end game on first loss of life</span>
+            <span class="k">if</span> <span class="n">reward</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">early_return</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">total_reward</span>
+
+        <span class="c"># end of game</span>
+        <span class="k">return</span> <span class="n">total_reward</span>
+
+</div></div>
+<div class="viewcode-block" id="GameHandlerRam"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerRam">[docs]</a><span class="k">class</span> <span class="nc">GameHandlerRam</span><span class="p">(</span><span class="n">GameHandler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rom</span><span class="p">,</span> <span class="n">showRom</span><span class="p">,</span> <span class="n">randVals</span><span class="p">,</span> <span class="n">expHandler</span><span class="p">,</span> <span class="n">skip_frame</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rom</span><span class="p">,</span> <span class="n">showRom</span><span class="p">,</span> <span class="n">randVals</span><span class="p">,</span> <span class="n">expHandler</span><span class="p">,</span> <span class="n">skip_frame</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GameHandlerRam.run_one_game"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerRam.run_one_game">[docs]</a>    <span class="k">def</span> <span class="nf">run_one_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">addFrameFn</span><span class="p">,</span> <span class="n">outputFn</span><span class="p">,</span> <span class="n">lives</span><span class="p">,</span> <span class="n">life_ram_ind</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">trainFn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">negReward</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">total_reward</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">reset_game</span><span class="p">()</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">game_over</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+                <span class="n">trainFn</span><span class="p">()</span>
+
+            <span class="c"># get ram frames</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="n">reward</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span><span class="p">):</span>
+                <span class="n">ram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getRAM</span><span class="p">()</span>
+
+                <span class="n">performedAction</span><span class="p">,</span> <span class="n">actionInd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">getLastAction</span><span class="p">()</span>
+                <span class="n">rew</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="n">performedAction</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">rew</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reward</span> <span class="o">+=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="n">negReward</span><span class="p">:</span>                    
+                    <span class="k">if</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lives</span><span class="p">:</span>
+                        <span class="n">reward</span> <span class="o">-=</span> <span class="mi">1</span>
+                        <span class="n">lives</span> <span class="o">=</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span> <span class="c">#73 is space invaders</span>
+                
+                <span class="n">ram</span> <span class="o">/=</span> <span class="mi">255</span>
+                <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ram</span><span class="p">)</span>
+
+            <span class="n">total_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+
+            <span class="n">addFrameFn</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">actionInd</span><span class="p">,</span> <span class="n">reward</span><span class="p">)</span>
+
+            <span class="n">actionVect</span> <span class="o">=</span> <span class="n">outputFn</span><span class="p">(</span><span class="n">frames</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span><span class="p">,</span> <span class="mi">128</span><span class="p">)))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">setAction</span><span class="p">(</span><span class="n">actionVect</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">frameCount</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span>
+            <span class="k">if</span> <span class="n">reward</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">early_return</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">total_reward</span>
+
+
+        <span class="c"># end of game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">anneal</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">total_reward</span>
+</div>
+<div class="viewcode-block" id="GameHandlerRam.evaluate"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerRam.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_fn</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_one_game</span><span class="p">(</span><span class="n">output_fn</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="n">early_return</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="GameHandlerReccurentRam"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerReccurentRam">[docs]</a><span class="k">class</span> <span class="nc">GameHandlerReccurentRam</span><span class="p">(</span><span class="n">GameHandler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rom</span><span class="p">,</span> <span class="n">showRom</span><span class="p">,</span> <span class="n">randVals</span><span class="p">,</span> <span class="n">expHandler</span><span class="p">,</span> <span class="n">skip_frame</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">rom</span><span class="p">,</span> <span class="n">showRom</span><span class="p">,</span> <span class="n">randVals</span><span class="p">,</span> <span class="n">expHandler</span><span class="p">,</span> <span class="n">skip_frame</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GameHandlerReccurentRam.run_one_game"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerReccurentRam.run_one_game">[docs]</a>    <span class="k">def</span> <span class="nf">run_one_game</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">addFrameFn</span><span class="p">,</span> <span class="n">outputFn</span><span class="p">,</span> <span class="n">lives</span><span class="p">,</span> <span class="n">life_ram_ind</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">trainFn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">negReward</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">total_reward</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">reset_game</span><span class="p">()</span>
+        <span class="n">gameStates</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">game_over</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+                <span class="n">trainFn</span><span class="p">()</span>
+
+            <span class="c"># get ram frames</span>
+            <span class="n">reward</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">ram</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">getRAM</span><span class="p">()</span>
+
+            <span class="n">performedAction</span><span class="p">,</span> <span class="n">actionInd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">getLastAction</span><span class="p">()</span>
+            <span class="n">rew</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ale</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="n">performedAction</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rew</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">reward</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">negReward</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">lives</span><span class="p">:</span>
+                    <span class="n">reward</span> <span class="o">-=</span> <span class="mi">1</span>
+                    <span class="n">lives</span> <span class="o">=</span> <span class="n">ram</span><span class="p">[</span><span class="n">life_ram_ind</span><span class="p">]</span> <span class="c">#73 is space invaders</span>
+
+
+            <span class="n">total_reward</span> <span class="o">+=</span> <span class="n">reward</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">ram</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">/</span><span class="mi">255</span>
+
+            <span class="n">addFrameFn</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">actionInd</span><span class="p">,</span> <span class="n">reward</span><span class="p">)</span>
+            <span class="n">gameStates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span>
+
+            <span class="n">netInp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">gameStates</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">gameStates</span><span class="p">),</span> <span class="mi">128</span><span class="p">))</span>
+
+            <span class="n">actionVect</span> <span class="o">=</span> <span class="n">outputFn</span><span class="p">(</span><span class="n">netInp</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">setAction</span><span class="p">(</span><span class="n">actionVect</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">frameCount</span> <span class="o">+=</span> <span class="mi">1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">skipFrame</span>
+            <span class="k">if</span> <span class="n">reward</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">early_return</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">total_reward</span>
+
+
+        <span class="c"># end of game</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actionHandler</span><span class="o">.</span><span class="n">anneal</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">total_reward</span>
+</div>
+<div class="viewcode-block" id="GameHandlerReccurentRam.evaluate"><a class="viewcode-back" href="../../handlers.html#handlers.gamehandler.GameHandlerReccurentRam.evaluate">[docs]</a>    <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_fn</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_one_game</span><span class="p">(</span><span class="n">output_fn</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">early_return</span><span class="o">=</span><span class="n">early_return</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">learningALE 0.1.alpha documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2015, IslandMan93.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
