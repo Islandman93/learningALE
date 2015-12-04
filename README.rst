@@ -7,6 +7,7 @@ of new papers about DQN and all it's variants but no combined place or package t
 the main purpose of this library.
 
 There are two things I believe are fundamental to this project:
+
 1. Prevent over-optimization. Speed is useful but it's important to be flexible and most importantly be easy to create
 new learners that have full access to all needed variables/objects/game state/etc.
 
@@ -18,7 +19,7 @@ Requirements
 
 Standard scientific packages needed: numpy, scipy, matplotlib.
 
-Neural net specific packages: `Theano <https://github.com/Theano/Theano>`_. and
+Neural net specific packages: `Theano <https://github.com/Theano/Theano>`_ and
 `Lasagne <https://github.com/Lasagne/Lasagne>`_.
 
 If you're using Windows and need help installing theano check out my blog post at
