@@ -70,40 +70,32 @@ class ExperienceHandler:
         if cost > 0:
             self.costList.append(cost)
 
-    def train_target(self, trainCount, cnn):
+    def train_target(self, cnn, target):
         cost = 0
-        # generate batch data
-        statesList, actionsList, rewardsList, state_tp1sList, isGood = self.getMultipleRandomExperience(trainCount)
-
-        # get reward tp1
-        r_tp1 = list()
-        for ep in range(trainCount):
-            rewards = np.asarray(rewardsList[ep], dtype=theano.config.floatX)
-            state_tp1s = np.asarray(state_tp1sList[ep], dtype=theano.config.floatX)
-
-            nonTerm = np.where(rewards == 0)
-            r_tp1.append(cnn.get_output(state_tp1s[nonTerm[0]]))
+        # generate minibatch data
+        states, actions, rewards, state_tp1s, isGood = self.getRandomExperience()
 
         if isGood:
-            for ep in range(trainCount):
-                states = np.asarray(statesList[ep])
-                actions = np.asarray(actionsList[ep], int)
-                rewards = np.asarray(rewardsList[ep], dtype=theano.config.floatX)                
+            states = np.asarray(states)
+            actions = np.asarray(actions, int)
+            rewards = np.asarray(rewards, dtype=theano.config.floatX)
+            state_tp1s = np.asarray(state_tp1s, dtype=theano.config.floatX)
 
-                nonTerm = np.where(rewards == 0)
-                rewards[nonTerm[0]] = np.max(r_tp1[ep], axis=1)*self.discount
+            nonTerm = np.where(rewards == 0)
+            r_tp1 = target.get_output(state_tp1s[nonTerm[0]])
+            rewards[nonTerm[0]] = np.max(r_tp1, axis=1)*self.discount
 
-                rewVals = np.zeros((self.miniBatch, self.numActions), dtype=theano.config.floatX)
-                arange = np.arange(self.miniBatch)
-                rewVals[arange, actions] = rewards
+            rewVals = np.zeros((self.miniBatch, self.numActions), dtype=theano.config.floatX)
+            arange = np.arange(self.miniBatch)
+            rewVals[arange, actions] = rewards
 
-                mask = np.zeros((self.miniBatch, self.numActions), dtype=theano.config.floatX)
-                nonZero = np.where(rewVals != 0)
-                mask[nonZero[0], nonZero[1]] = 1
-                cost += cnn.train(states, rewVals, mask)
+            mask = np.zeros((self.miniBatch, self.numActions), dtype=theano.config.floatX)
+            nonZero = np.where(rewVals != 0)
+            mask[nonZero[0], nonZero[1]] = 1
+            cost += cnn.train(states, rewVals, mask)
 
-            if cost > 0:
-                self.costList.append(cost/trainCount)
+        if cost > 0:
+            self.costList.append(cost)
 
     def getMultipleRandomExperience(self, numToGet):
         if len(self.states) < numToGet:

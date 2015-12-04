@@ -58,6 +58,13 @@ class CNN:
         with open(file,'wb') as outfile:
             pickle.dump(parms, outfile)
 
+    def copy(self):
+        # create new network of myself
+        new_net = CNN(self.l_in.output_shape, self.l_out.output_shape[1])
+        myparms = lasagne.layers.get_all_param_values(self.l_out)
+        lasagne.layers.set_all_param_values(new_net.l_out, myparms)
+        return new_net
+
 
 class SPPLayer(lasagne.layers.Layer):
     def __init__(self, incoming, **kwargs):
