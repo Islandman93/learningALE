@@ -5,7 +5,7 @@ from learningALE.handlers.trainhandler import TrainHandler
 from learningALE.learners.nns import CNN
 
 
-class DQNLearner(learner):
+class DoubleDQNLearner(learner):
     def __init__(self, skip_frame, num_actions, load=None):
         super().__init__()
 
@@ -15,9 +15,13 @@ class DQNLearner(learner):
         self.exp_handler = ExperienceHandler(1000000/skip_frame)
         self.train_handler = TrainHandler(32, 0.9, num_actions)
         self.cnn = CNN((None, skip_frame, 86, 80), num_actions, .1)
+        self.target_cnn = self.cnn.copy()
 
         if load is not None:
             self.cnn.load(load)
+
+    def copy_new_target(self):
+        self.target_cnn = self.cnn.copy()
 
     def get_action(self, game_input):
         return self.cnn.get_output(game_input)[0]
@@ -27,7 +31,7 @@ class DQNLearner(learner):
 
     def frames_processed(self, frames, action_performed, reward):
         self.exp_handler.add_experience(frames, self.action_handler.game_action_to_action_ind(action_performed), reward)
-        self.train_handler.train_exp(self.exp_handler, self.cnn)
+        self.train_handler.train_double(self.exp_handler, self.cnn, self.target_cnn)
         self.action_handler.anneal()
 
     def set_legal_actions(self, legal_actions):

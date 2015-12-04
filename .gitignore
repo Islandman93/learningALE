@@ -1,4 +1,6 @@
 # PyCharm files
 .idea
+LearningALE.egg-info
+_build/
 *.pkl
 __pycache__/

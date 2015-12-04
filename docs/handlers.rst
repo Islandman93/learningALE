@@ -28,22 +28,13 @@ handlers.gamehandler module
     :undoc-members:
     :show-inheritance:
 
-handlers.recurrenthandler module
---------------------------------
+handlers.trainhandler module
+----------------------------
 
-.. automodule:: handlers.recurrenthandler
+.. automodule:: handlers.trainhandler
     :members:
     :undoc-members:
     :show-inheritance:
-
-handlers.tdhandler module
--------------------------
-
-.. automodule:: handlers.tdhandler
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

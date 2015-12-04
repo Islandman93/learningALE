@@ -21,6 +21,16 @@ import os
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../learningALE/'))
 
+# -- Mock out imports so autodoc works --
+from unittest.mock import MagicMock
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return Mock()
+
+MOCK_MODULES = ['numpy', 'scipy', 'theano', 'lasagne']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -266,9 +276,9 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = 'learningALE'
-epub_author = 'Author'
-epub_publisher = 'Author'
-epub_copyright = '2015, Author'
+epub_author = 'IslandMan93'
+epub_publisher = 'IslandMan93'
+epub_copyright = '2015, IslandMan93'
 
 # The basename for the epub file. It defaults to the project name.
 #epub_basename = 'learningALE'

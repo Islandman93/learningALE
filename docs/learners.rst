@@ -12,14 +12,6 @@ learners.learner module
     :undoc-members:
     :show-inheritance:
 
-learners.cosyne module
-----------------------
-
-.. automodule:: learners.cosyne
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 learners.nns module
 -------------------
 

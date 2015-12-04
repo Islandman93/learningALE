@@ -2,7 +2,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from learningALE.handlers.gamehandler import GameHandler
-from DQNLearner import DQNLearner
+from TargetDQNLearner import TargetDQNLearner
 from learningALE.tools.life_ram_inds import BREAKOUT
 
 
@@ -11,7 +11,7 @@ rom = b'D:\\_code\\_reinforcementlearning\\breakout.bin'
 gamename = 'breakout'
 skip_frame = 4
 num_actions = 4
-learner = DQNLearner(skip_frame, num_actions)
+learner = TargetDQNLearner(skip_frame, num_actions)
 game_handler = GameHandler(rom, False, learner, skip_frame)
 scoreList = list()
 validLossList = list()
@@ -20,6 +20,7 @@ bestTotReward = -np.inf
 plt.ion()
 st = time.time()
 for episode in range(5000):
+    learner.copy_new_target()  # copy a new target learner at the start of each game
     total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT)
     scoreList.append(total_reward)
 
