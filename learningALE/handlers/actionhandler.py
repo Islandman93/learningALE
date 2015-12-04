@@ -40,37 +40,90 @@ class ActionHandler:
         else:
             self.numActions = 0
 
-    def getAction(self, action, random=True):
+    def get_action(self, action_values, random=True):
+        """
+        Get_Action takes an action_values vector from a learner of length # legal actions and will perform the
+        stochastic selection policy on it.
+
+        Parameters
+        ----------
+        action_values : array of length # legal actions
+            Output from a learner of values for each possible action
+
+        random : bool
+            Default true. Whether to perform the stochastic action_values selection policy or just return the max value
+            index.
+
+        Returns
+        -------
+        Index of max action value.
+        """
         if random:
             if self.actionPolicy == ActionPolicy.eGreedy:
-                # egreedy policy to choose random action
+                # egreedy policy to choose random action_values
                 if np.random.uniform(0, 1) <= self.randVal:
-                    action = np.random.randint(self.numActions)
+                    e_greedy = np.random.randint(self.numActions)
+                    action_values[e_greedy] = np.inf  # set this value as the max action
                     self.countRand += 1
-                else:
-                    action = np.where(action == np.max(action))[0][0]
             elif self.actionPolicy == ActionPolicy.randVals:
-                assert np.iterable(action)
-                action += np.random.randn(self.numActions) * self.randVal
-                action = np.where(action == np.max(action))[0][0]
+                action_values += np.random.randn(self.numActions) * self.randVal
+
+        action = np.where(action_values == np.max(action_values))[0][0]
         self.actionCount += 1
 
         return action
 
     def anneal(self):
+        """
+        Anneals the random value used in the stochastic action selection policy.
+        """
         self.randVal -= self.diff
         if self.randVal < self.lowestRandVal:
             self.randVal = self.lowestRandVal
 
     def set_legal_actions(self, legal_actions):
+        """
+        Sets the legal actions for this handler. Sets up values need for conversion from ALE action id to learner.
+
+        Parameters
+        ----------
+        legal_actions : array/list/tuple
+            Legal actions in current ALE game
+        """
         self.actions = legal_actions
         self.numActions = len(legal_actions)
 
-    def game_action_to_action_ind(self, action_performed):
-        return np.where(action_performed == self.actions)[0]
+    def game_action_to_action_ind(self, action):
+        """
+        Converts an action id returned from ALE to the index used in the learner.
+
+        Parameters
+        ----------
+        action : int
+        ALE action index
+
+        Returns
+        -------
+        Action index relative to learner output vector
+        """
+        return np.where(action == self.actions)[0]
 
     def action_vect_to_game_action(self, action_vect, random=True):
-        return self.actions[self.getAction(action_vect, random)]
+        """
+        Converts action vector output of learner to a ALE ready action id. Default performs stochastic action policy
+
+        Parameters
+        ----------
+        action_vect : array
+            Action vector output from learner
+        random : bool
+            Default True. Whether or not to use stochastic action policy
+
+        Returns
+        -------
+        ALE ready action id
+        """
+        return self.actions[self.get_action(action_vect, random)]
 
 
 class ActionHandlerTiring(ActionHandler):
@@ -95,24 +148,24 @@ class ActionHandlerTiring(ActionHandler):
         self.numActions = len(actions)
         self.inhibitor = np.zeros(len(actions))
 
-    def getAction(self, action, inhibit=True):
+    def get_action(self, action_values, inhibit=True):
         if inhibit:
-            # action
-            action = np.where(action == np.max(action))[0][0]
+            # action_values
+            action_values = np.where(action_values == np.max(action_values))[0][0]
             if self.actionPolicy == ActionPolicy.eGreedy:
-                # egreedy policy to choose random action
+                # egreedy policy to choose random action_values
                 if np.random.uniform(0, 1) <= self.randVal:
-                    action = np.random.randint(self.numActions)
+                    action_values = np.random.randint(self.numActions)
                     self.countRand += 1
                 # else:
 
             elif self.actionPolicy == ActionPolicy.randVals:
-                assert np.iterable(action)
-                action += np.random.randn(self.numActions) * self.randVal
-                action = np.where(action == np.max(action))[0][0]
+                assert np.iterable(action_values)
+                action_values += np.random.randn(self.numActions) * self.randVal
+                action_values = np.where(action_values == np.max(action_values))[0][0]
 
 
-        return self.actions[action], action
+        return self.actions[action_values], action_values
 
     def game_over(self):
         """

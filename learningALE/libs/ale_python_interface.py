@@ -10,7 +10,7 @@ import numpy as np
 from numpy.ctypeslib import as_ctypes
 import os
 cwd = os.getcwd()
-os.chdir('D:\_code\_reinforcementlearning\python-deep-q-learning-master\learningALE\libs')
+os.chdir('D:\_code\_reinforcementlearning\learningALE\learningALE\libs')
 
 ale_lib = cdll.LoadLibrary('ALE.dll')
 os.chdir(cwd)

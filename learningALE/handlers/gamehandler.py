@@ -47,7 +47,7 @@ class GameHandler:
         ----------
         learner : :class:`learners.learner`
             Will call get_game_action and frames_processed.
-            get_game_action must return a valid ALE action ind. add_experience can be a pass.
+            get_game_action must return a valid ALE action ind. frames_processed can be a pass.
 
         lives : int
             Number of lives at start of game. Default None

@@ -7,7 +7,7 @@ from learningALE.libs.ale_python_interface import ALEInterface
 
 """
 This example is meant for those wanting to play around with GameHandler, or implement their own ALE interface.
-For people that want a plug and play interface use learningALE.handlers.GameHandler
+For people that want a plug and play interface use :class:`handlers.GameHandler`
 """
 
 
@@ -33,6 +33,7 @@ for episode in range(1):
         gamescreen = ale.getScreenRGB()
         gamescreen = np.asarray(gamescreen.view(np.uint8).reshape(screen_height, screen_width, 4)[:, :, 0], dtype=np.float)
 
+        # get ram
         ram = ale.getRAM()
 
         # take the action and get the reward
