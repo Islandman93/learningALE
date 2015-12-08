@@ -2,7 +2,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from learningALE.handlers.gamehandler import GameHandler
-from DQNLearner import DQNLearner
+from learningALE.learners.DQN import DQNLearner
 from learningALE.tools.life_ram_inds import BREAKOUT
 
 
@@ -22,6 +22,8 @@ st = time.time()
 for episode in range(5000):
     total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT)
     scoreList.append(total_reward)
+
+    learner.game_over()  # trim experience replay of learner
 
     # if this is the best score save it as such
     if total_reward >= bestTotReward:

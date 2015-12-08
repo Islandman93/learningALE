@@ -13,14 +13,6 @@ class ExperienceHandler:
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
-        if len(self.states) > self.max_len:
-            del self.states[0]
-
-        if len(self.rewards) > self.max_len:
-            del self.rewards[0]
-
-        if len(self.actions) > self.max_len:
-            del self.actions[0]
 
     def get_random_experience(self, mini_batch, dtype=np.float32):
         if len(self.states) <= mini_batch:
@@ -32,16 +24,27 @@ class ExperienceHandler:
         reward = list()
         state_tp1 = list()
         for exp in range(mini_batch):
-            state.append(self.states[rp[exp]])
-            action.append(self.actions[rp[exp]])
-            reward.append(self.rewards[rp[exp]])
-            state_tp1.append(self.states[rp[exp]+1])
+            exp_ind = rp[exp]
+            state.append(self.states[exp_ind])
+            action.append(self.actions[exp_ind])
+            reward.append(self.rewards[exp_ind])
+            state_tp1.append(self.states[exp_ind+1])
 
         state = np.asarray(state)
         action = np.asarray(action, int)
         reward = np.asarray(reward, dtype=dtype)
         state_tp1 = np.asarray(state_tp1, dtype=dtype)
         return state, action, reward, state_tp1, 1
+
+    def trim(self):
+        while len(self.states) > self.max_len:
+            del self.states[0]
+
+        while len(self.rewards) > self.max_len:
+            del self.rewards[0]
+
+        while len(self.actions) > self.max_len:
+            del self.actions[0]
 
 
 import unittest

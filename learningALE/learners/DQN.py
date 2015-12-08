@@ -19,16 +19,20 @@ class DQNLearner(learner):
         if load is not None:
             self.cnn.load(load)
 
-    def get_action(self, game_input):
-        return self.cnn.get_output(game_input)[0]
-
-    def get_game_action(self, game_input):
-        return self.action_handler.action_vect_to_game_action(self.get_action(game_input))
-
     def frames_processed(self, frames, action_performed, reward):
         self.exp_handler.add_experience(frames, self.action_handler.game_action_to_action_ind(action_performed), reward)
         self.train_handler.train_exp(self.exp_handler, self.cnn)
         self.action_handler.anneal()
+
+    def get_action(self, game_input):
+        return self.cnn.get_output(game_input)[0]
+
+    def game_over(self):
+        self.exp_handler.trim()  # trim experience replay of learner
+        self.exp_handler.add_terminal()  # adds a terminal
+
+    def get_game_action(self, game_input):
+        return self.action_handler.action_vect_to_game_action(self.get_action(game_input))
 
     def set_legal_actions(self, legal_actions):
         self.action_handler.set_legal_actions(legal_actions)
@@ -38,3 +42,4 @@ class DQNLearner(learner):
 
     def get_cost_list(self):
         return self.train_handler.costList
+
