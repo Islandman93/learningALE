@@ -41,7 +41,7 @@ class CNN:
 
         update = lasagne.updates.rmsprop(grads, params, 0.002)
 
-        self.train = theano.function([self.l_in.input_var, truth, mask], loss, updates=update)
+        self.train = theano.function([self.l_in.input_var, truth, mask], [loss, net_output], updates=update)
         self.get_output = theano.function([self.l_in.input_var], outputs=net_output)
         self.get_hid1_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid1))
         self.get_hid2_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid2))
