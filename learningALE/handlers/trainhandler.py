@@ -11,36 +11,33 @@ class TrainHandler:
 
     def train_exp(self, exp_handler, cnn):
         # generate minibatch data
-        states, actions, rewards, state_tp1s, isGood = exp_handler.get_random_experience(self.mini_batch)
+        states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
-        if isGood:
-            nonTerm = np.where(rewards == 0)
-            r_tp1 = cnn.get_output(state_tp1s[nonTerm[0]])
-            rewards[nonTerm[0]] = np.max(r_tp1, axis=1)*self.discount
+        if states is not None:
+            r_tp1 = cnn.get_output(state_tp1s)
+            rewards += (1-terminal) * self.discount * np.max(r_tp1, axis=1)
 
             self._train_from_ras(rewards, actions, states, cnn)
 
     def train_target(self, exp_handler, cnn, target):
         # generate minibatch data
-        states, actions, rewards, state_tp1s, isGood = exp_handler.get_random_experience(self.mini_batch)
+        states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
-        if isGood:
-            nonTerm = np.where(rewards == 0)
-            r_tp1 = target.get_output(state_tp1s[nonTerm[0]])
-            rewards[nonTerm[0]] = np.max(r_tp1, axis=1)*self.discount
+        if states is not None:
+            r_tp1 = target.get_output(state_tp1s)
+            rewards += (1-terminal) * self.discount * np.max(r_tp1, axis=1)
 
             self._train_from_ras(rewards, actions, states, cnn)
 
     def train_double(self, exp_handler, cnn, target):
         # generate minibatch data
-        states, actions, rewards, state_tp1s, isGood = exp_handler.get_random_experience(self.mini_batch)
+        states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
-        if isGood:
-            nonTerm = np.where(rewards == 0)
-            action_selection = np.argmax(cnn.get_output(state_tp1s[nonTerm[0]]), axis=1)
-            value_estimation = target.get_output(state_tp1s[nonTerm[0]])
-            r_double_dqn = value_estimation[np.arange(0, action_selection.size), action_selection]
-            rewards[nonTerm[0]] = r_double_dqn*self.discount
+        if states is not None:
+            action_selection = np.argmax(cnn.get_output(state_tp1s), axis=1)
+            value_estimation = target.get_output(state_tp1s)
+            r_double_dqn = value_estimation[np.arange(0, self.mini_batch), action_selection]
+            rewards += (1-terminal) * self.discount * r_double_dqn
 
             self._train_from_ras(rewards, actions, states, cnn)
 

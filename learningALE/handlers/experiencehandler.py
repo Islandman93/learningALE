@@ -7,38 +7,52 @@ class ExperienceHandler:
         self.states = list()
         self.rewards = list()
         self.actions = list()
+        self.term_states = set()
+        self.num_inserted = 0
         self.max_len = max_len
 
     def add_experience(self, state, action, reward):
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
+        self.num_inserted += 1
+        return self.num_inserted
 
+    def add_terminal(self):
+        self.term_states.add(len(self.states)-1)  # add a terminal state indicator.
+
+    # @profile
     def get_random_experience(self, mini_batch, dtype=np.float32):
-        if len(self.states) <= mini_batch:
-            return None, None, None, None, 0
+        if self.num_inserted <= mini_batch:
+            return None, None, None, None, None
 
         rp = np.random.permutation(len(self.states)-1)
-        state = list()
-        action = list()
-        reward = list()
-        state_tp1 = list()
+        state_shape = self.states[0].shape
+        mb_states = np.zeros((mini_batch,) + state_shape, dtype=dtype)
+        mb_states_tp1 = np.zeros((mini_batch,) + state_shape, dtype=dtype)
+        mb_actions = list()
+        mb_rewards = list()
+        mb_terminal = list()
         for exp in range(mini_batch):
             exp_ind = rp[exp]
-            state.append(self.states[exp_ind])
-            action.append(self.actions[exp_ind])
-            reward.append(self.rewards[exp_ind])
-            state_tp1.append(self.states[exp_ind+1])
+            mb_states[exp] = self.states[exp_ind]
+            mb_actions.append(self.actions[exp_ind])
+            mb_rewards.append(self.rewards[exp_ind])
+            if exp_ind in self.term_states:
+                mb_terminal.append(1)
+            else:
+                mb_terminal.append(0)
+                mb_states_tp1[exp] = self.states[exp_ind+1]
 
-        state = np.asarray(state)
-        action = np.asarray(action, int)
-        reward = np.asarray(reward, dtype=dtype)
-        state_tp1 = np.asarray(state_tp1, dtype=dtype)
-        return state, action, reward, state_tp1, 1
+        mb_actions = np.asarray(mb_actions, dtype=int)
+        mb_rewards = np.asarray(mb_rewards, dtype=dtype)
+        mb_terminal = np.asarray(mb_terminal, dtype=int)
+        return mb_states, mb_actions, mb_rewards, mb_states_tp1, mb_terminal
 
     def trim(self):
         while len(self.states) > self.max_len:
             del self.states[0]
+            self.term_states -= 1  # if we are deleting a state we need to decrement the terminal state indicators
 
         while len(self.rewards) > self.max_len:
             del self.rewards[0]
