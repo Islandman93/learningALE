@@ -106,7 +106,7 @@ class ActionHandler:
         -------
         Action index relative to learner output vector
         """
-        return np.where(action == self.actions)[0]
+        return np.where(action == self.actions)[0][0]
 
     def action_vect_to_game_action(self, action_vect, random=True):
         """

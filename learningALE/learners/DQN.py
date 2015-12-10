@@ -9,7 +9,7 @@ class DQNLearner(learner):
     def __init__(self, skip_frame, num_actions, load=None):
         super().__init__()
 
-        rand_vals = (1, 0.1, 1000000/skip_frame)  # starting at 1 anneal eGreedy policy to 0.1 over 1,000,000*skip_frame
+        rand_vals = (1, 0.1, 10000/skip_frame)  # starting at 1 anneal eGreedy policy to 0.1 over 1,000,000/skip_frame
         self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
 
         self.exp_handler = ExperienceHandler(1000000/skip_frame)
