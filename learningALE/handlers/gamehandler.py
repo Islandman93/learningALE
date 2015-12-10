@@ -69,6 +69,7 @@ class GameHandler:
             neg_reward = False
 
         total_reward = 0.0
+        gamescreen = None
         self.ale.reset_game()
         action_to_perform = 0  # initially set at zero because we start the game before asking the learner
         while not self.ale.game_over():
@@ -78,7 +79,7 @@ class GameHandler:
 
             # loop over skip frame
             for frame in range(self.skipFrame):
-                gamescreen = self.ale.getScreenRGB()
+                gamescreen = self.ale.getScreenRGB(gamescreen)
 
                 # convert ALE gamescreen into usable image, scaled between 0 and 1
                 processedImg = np.asarray(

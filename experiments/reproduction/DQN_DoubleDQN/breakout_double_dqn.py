@@ -24,6 +24,8 @@ for episode in range(5000):
     total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT)
     scoreList.append(total_reward)
 
+    learner.game_over()
+
     # if this is the best score save it as such
     if total_reward >= bestTotReward:
         learner.save('dqnbest{0}.pkl'.format(total_reward))

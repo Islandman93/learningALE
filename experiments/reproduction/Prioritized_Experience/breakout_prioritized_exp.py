@@ -2,8 +2,8 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from learningALE.handlers.gamehandler import GameHandler
-from learningALE.learners.DQN import DQNLearner
 from learningALE.tools.life_ram_inds import BREAKOUT
+from PrioritizedExperienceLearner import PrioritizedExperienceLearner
 
 
 # setup vars
@@ -11,19 +11,20 @@ rom = b'D:\\_code\\_reinforcementlearning\\breakout.bin'
 gamename = 'breakout'
 skip_frame = 4
 num_actions = 4
-learner = DQNLearner(skip_frame, num_actions)
+learner = PrioritizedExperienceLearner(skip_frame, num_actions)
 game_handler = GameHandler(rom, False, learner, skip_frame)
 scoreList = list()
 validLossList = list()
 bestTotReward = -np.inf
 
-plt.ion()
+# plt.ion()
 st = time.time()
-for episode in range(5000):
+for episode in range(1):
     total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT)
     scoreList.append(total_reward)
 
-    learner.game_over()  # trim experience replay of learner
+    learner.game_over()
+    learner.plot_tree()
 
     # if this is the best score save it as such
     if total_reward >= bestTotReward:
@@ -37,7 +38,7 @@ for episode in range(5000):
     plt.subplot(1, 2, 2)
     sl = np.asarray(scoreList)
     plt.plot(sl, '.')
-    plt.pause(0.01)
+    # plt.pause(0.01)
 
     # save params every 10 games
     if episode % 10 == 0:
@@ -47,7 +48,7 @@ for episode in range(5000):
     print("Episode " + str(episode) + " ended with score: " + str(total_reward))
     print('Total Time:', et - st, 'Frame Count:', game_handler.frameCount, 'FPS:', game_handler.frameCount / (et - st))
 
-plt.ioff()
+# plt.ioff()
 plt.show()
 
 # final save
