@@ -49,7 +49,7 @@ class TrainHandler:
         mask = np.zeros((self.mini_batch, self.num_actions), dtype=self.dtype)
         nonZero = np.where(rewVals != 0)
         mask[nonZero[0], nonZero[1]] = 1
-        cost = cnn.train(states, rewVals, mask)
+        cost, states_output = cnn.train(states, rewVals, mask)
 
         self.costList.append(cost)
 
