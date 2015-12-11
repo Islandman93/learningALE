@@ -90,7 +90,8 @@ class ActionHandler:
         legal_actions : array/list/tuple
             Legal actions in current ALE game
         """
-        self.actions = legal_actions
+        self.actions = np.asarray(legal_actions, dtype=int)
+        assert len(self.actions.shape) == 1, "actions must be a vector"
         self.numActions = len(legal_actions)
 
     def game_action_to_action_ind(self, action):

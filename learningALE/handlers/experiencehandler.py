@@ -23,10 +23,10 @@ class ExperienceHandler:
 
     # @profile
     def get_random_experience(self, mini_batch, dtype=np.float32):
-        if self.num_inserted <= mini_batch:
+        if self.num_inserted < mini_batch:
             return None, None, None, None, None
 
-        rp = np.random.permutation(len(self.states)-1)
+        rp = np.random.choice(self.num_inserted, replace=False, size=mini_batch)
         state_shape = self.states[0].shape
         mb_states = np.zeros((mini_batch,) + state_shape, dtype=dtype)
         mb_states_tp1 = np.zeros((mini_batch,) + state_shape, dtype=dtype)
@@ -52,33 +52,15 @@ class ExperienceHandler:
     def trim(self):
         while len(self.states) > self.max_len:
             del self.states[0]
-            self.term_states -= 1  # if we are deleting a state we need to decrement the terminal state indicators
+            # if we are deleting a state we need to decrement the terminal state indicators
+            term_states = list(self.term_states)
+            term_states = [x - 1 for x in term_states]
+            self.term_states = term_states
+
+            self.num_inserted -= 1
 
         while len(self.rewards) > self.max_len:
             del self.rewards[0]
 
         while len(self.actions) > self.max_len:
             del self.actions[0]
-
-
-import unittest
-
-
-class TestExperienceHandler(unittest.TestCase):
-    def test_validation(self):
-        expHandler = self.getExpHandler(100)
-        class dummy:
-            def get_output(self, x):
-                return np.random.randn(x.shape[0], 7)
-
-    def getExpHandler(self, numDataToGet):
-        expHandler = ExperienceHandler(32, 0.95, 1000, 7)
-        for i in range(numDataToGet):
-            states = np.random.random((4, 105, 80))
-            rewards = np.random.randint(0, 2)
-            actions = np.random.randint(0, 7)
-            expHandler.add_experience(states, actions, rewards)
-        return expHandler
-
-if __name__ == '__main__':
-    unittest.main()
