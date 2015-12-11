@@ -23,10 +23,10 @@ class ExperienceHandler:
 
     # @profile
     def get_random_experience(self, mini_batch, dtype=np.float32):
-        if self.num_inserted < mini_batch:
+        if self.num_inserted <= mini_batch:
             return None, None, None, None, None
 
-        rp = np.random.choice(self.num_inserted, replace=False, size=mini_batch)
+        rp = np.random.choice(self.num_inserted-1, replace=False, size=mini_batch)
         state_shape = self.states[0].shape
         mb_states = np.zeros((mini_batch,) + state_shape, dtype=dtype)
         mb_states_tp1 = np.zeros((mini_batch,) + state_shape, dtype=dtype)
