@@ -1,5 +1,5 @@
 __author__ = 'Ben'
-from learningALE.handlers.binarysearch import BinaryTree
+from learningALE.handlers.binarytree import BinaryTree
 from learningALE.handlers.experiencehandler import ExperienceHandler
 import numpy as np
 
@@ -12,7 +12,6 @@ class PrioritizedExperienceHandler(ExperienceHandler):
         self.discount = discount
         self.costList = list()
         self.tree = BinaryTree()
-        self.buffer = 0
 
     def add_experience(self, state, action, reward):
         insert_ind = super().add_experience(state, action, reward)

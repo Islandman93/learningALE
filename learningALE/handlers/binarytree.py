@@ -36,15 +36,20 @@ class Node:
         return ret_val, extra_vals, hanging_left, term
 
     def get_size(self):
-        raise NotImplementedError
+        size = 1  # 1 includes this node
+        if self.left:
+            size += self.left.get_size()
+        if self.right:
+            size += self.right.get_size()
+        return size
 
-    def get_xy_vals(self, node_yx_vals, loc, depth, curr_depth=0):
+    def get_yx_vals(self, node_yx_vals, loc, depth, curr_depth=0):
         node_yx_vals.append([curr_depth, loc - 1, self.value])
         horizontal_move = 2**(depth-(curr_depth+1)-1)
         if self.right:
-            node_yx_vals = self.right.get_xy_vals(node_yx_vals, loc + horizontal_move, depth, curr_depth + 1)
+            node_yx_vals = self.right.get_yx_vals(node_yx_vals, loc + horizontal_move, depth, curr_depth + 1)
         if self.left:
-            node_yx_vals = self.left.get_xy_vals(node_yx_vals, loc - horizontal_move, depth, curr_depth + 1)
+            node_yx_vals = self.left.get_yx_vals(node_yx_vals, loc - horizontal_move, depth, curr_depth + 1)
         return node_yx_vals
 
     def depth(self):
@@ -89,29 +94,3 @@ class BinaryTree:
         for ind, val in enumerate(yx_list[:, 2]):
             ax.annotate('{:03.3f}'.format(val), (yx_list[ind, 1], yx_list[ind, 0]*-1))
         plt.show()
-
-
-if __name__ == '__main__':
-    root = Node(np.random.random())
-    import time
-
-    st = time.time()
-    for add in range(500):
-        b = np.random.random()
-        root.insert(b)
-
-    for add in range(1000):
-        b = np.random.random()
-        root.insert(b)
-        root.pop_max()
-
-    et = time.time()
-
-    # test popping the top
-    # root = Node(np.inf)
-    # root.insert(0)
-    # ret_vals, extra_vals, hanging_left, term = root.pop_max()
-    # print(ret_vals, hanging_left, term)
-    print(et-st)
-    root.plot()
-
