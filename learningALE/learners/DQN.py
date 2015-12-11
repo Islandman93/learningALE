@@ -13,7 +13,7 @@ class DQNLearner(learner):
         self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
 
         self.exp_handler = ExperienceHandler(1000000/skip_frame)
-        self.train_handler = TrainHandler(32, 0.9, num_actions)
+        self.train_handler = TrainHandler(32, 0.99, num_actions)
         self.cnn = CNN((None, skip_frame, 86, 80), num_actions, .1)
 
         if load is not None:
