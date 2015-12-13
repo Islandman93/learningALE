@@ -45,5 +45,7 @@ def test_anneal(action_handler: ActionHandler):
     assert action_handler.randVal == action_handler.lowestRandVal
 
 
-if __name__ == '__main__':
-    pytest.main()
+def test_rand_vals():
+    # just test to make sure rand vals doesn't fail
+    action_handler = ActionHandler(ActionPolicy.randVals, [1, 0.1, 2], [0, 2, 4, 6])
+    action_handler.get_action([0, 0, 0, 0])
