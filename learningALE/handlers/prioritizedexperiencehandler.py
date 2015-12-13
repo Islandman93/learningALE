@@ -21,10 +21,10 @@ class PrioritizedExperienceHandler(ExperienceHandler):
 
     def add_terminal(self):
         super().add_terminal()
-        self.tree.insert(np.inf, self.num_inserted-1)
+        self.tree.insert(np.inf, self.size - 1)
 
     def get_prioritized_experience(self, mini_batch, dtype=np.float32):
-        if self.num_inserted <= mini_batch:
+        if self.size <= mini_batch:
             return None, None, None, None, None, None
 
         state_shape = self.states[0].shape
@@ -52,31 +52,9 @@ class PrioritizedExperienceHandler(ExperienceHandler):
         mb_terminal = np.asarray(mb_terminal, dtype=int)
         return mb_states, mb_actions, mb_rewards, mb_states_tp1, mb_terminal, mb_inds_poped
 
-    def train(self, mini_batch, cnn):
-        # generate minibatch data
-        states, actions, rewards, state_tp1s, terminal, mb_inds_poped = self.get_prioritized_experience(mini_batch)
-
-        if states is not None:
-            r_tp1 = cnn.get_output(state_tp1s)
-            max_tp1 = np.max(r_tp1, axis=1)
-            rewards += (1-terminal) * self.discount * max_tp1
-
-            rewVals = np.zeros((mini_batch, self.num_actions), dtype=self.dtype)
-            arange = np.arange(mini_batch)
-            rewVals[arange, actions] = rewards
-
-            mask = np.zeros((mini_batch, self.num_actions), dtype=self.dtype)
-            nonZero = np.where(rewVals != 0)
-            mask[nonZero[0], nonZero[1]] = 1
-            cost, output_states = cnn.train(states, rewVals, mask)
-            self.costList.append(cost)
-
-            # update tree with new td_error
-            max_states = np.max(output_states, axis=1)
-            td_errors = np.abs(max_tp1 - max_states)
-
-            for td_error, ind in zip(td_errors, mb_inds_poped):
-                self.tree.insert(td_error, ind)
+    def set_new_td_errors(self, td_errors, state_inds):
+        for td_error, ind in zip(td_errors, state_inds):
+            self.tree.insert(td_error, ind)
 
     def trim(self):
         super().trim()
