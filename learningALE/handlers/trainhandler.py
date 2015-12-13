@@ -1,4 +1,6 @@
 import numpy as np
+from learningALE.handlers.experiencehandler import ExperienceHandler
+from learningALE.handlers.prioritizedexperiencehandler import PrioritizedExperienceHandler
 
 
 class TrainHandler:
@@ -9,7 +11,7 @@ class TrainHandler:
         self.num_actions = num_actions
         self.dtype = dtype
 
-    def train_exp(self, exp_handler, cnn):
+    def train_exp(self, exp_handler: ExperienceHandler, cnn):
         # generate minibatch data
         states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
@@ -19,7 +21,7 @@ class TrainHandler:
 
             self._train_from_ras(rewards, actions, states, cnn)
 
-    def train_target(self, exp_handler, cnn, target):
+    def train_target(self, exp_handler: ExperienceHandler, cnn, target):
         # generate minibatch data
         states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
@@ -29,7 +31,7 @@ class TrainHandler:
 
             self._train_from_ras(rewards, actions, states, cnn)
 
-    def train_double(self, exp_handler, cnn, target):
+    def train_double(self, exp_handler: ExperienceHandler, cnn, target):
         # generate minibatch data
         states, actions, rewards, state_tp1s, terminal = exp_handler.get_random_experience(self.mini_batch)
 
@@ -40,6 +42,31 @@ class TrainHandler:
             rewards += (1-terminal) * self.discount * r_double_dqn
 
             self._train_from_ras(rewards, actions, states, cnn)
+
+    def train_prioritized_exp(self, exp_handler: PrioritizedExperienceHandler, mini_batch: int, cnn):
+        # generate minibatch data
+        states, actions, rewards, state_tp1s, terminal, mb_inds_popped = exp_handler.get_prioritized_experience(mini_batch)
+
+        if states is not None:
+            r_tp1 = cnn.get_output(state_tp1s)
+            max_tp1 = np.max(r_tp1, axis=1)
+            rewards += (1-terminal) * self.discount * max_tp1
+
+            rewVals = np.zeros((mini_batch, self.num_actions), dtype=self.dtype)
+            arange = np.arange(mini_batch)
+            rewVals[arange, actions] = rewards
+
+            mask = np.zeros((mini_batch, self.num_actions), dtype=self.dtype)
+            nonZero = np.where(rewVals != 0)
+            mask[nonZero[0], nonZero[1]] = 1
+            cost, output_states = cnn.train(states, rewVals, mask)
+            self.costList.append(cost)
+
+            # update prioritized exp handler with new td_error
+            max_states = np.max(output_states, axis=1)
+            td_errors = np.abs(max_tp1 - max_states)
+
+            exp_handler.set_new_td_errors(td_errors, mb_inds_popped)
 
     def _train_from_ras(self, rewards, actions, states, cnn):
         rewVals = np.zeros((self.mini_batch, self.num_actions), dtype=self.dtype)

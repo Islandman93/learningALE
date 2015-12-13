@@ -11,18 +11,18 @@ class ActionHandler:
 
     This class supports linear annealing of both the eGreedy probability value and the randVals scalar.
 
-     Parameters
-     ----------
-     action_policy : :class:`ActionPolicy`
-        Specifies whether using eGreedy or adding randVals to the action value vector
+    Parameters
+    ----------
+    action_policy : :class:`ActionPolicy`
+       Specifies whether using eGreedy or adding randVals to the action value vector
 
-     random_values : tuple
-        Specifies which values to use for the action policy
-        format: (Initial random value, ending random value, number of steps to anneal over)
+    random_values : tuple
+       Specifies which values to use for the action policy
+       format: (Initial random value, ending random value, number of steps to anneal over)
 
-     actions : tuple, list, array
-        Default None, should be set by gameHandler.
-        The legal actions from the :class:`libs.ale_python_interface.ALEInterface`
+    actions : tuple, list, array
+       Default None, should be set by gameHandler.
+       The legal actions from the :class:`libs.ale_python_interface.ALEInterface`
     """
     def __init__(self, action_policy, random_values, actions=None):
         self.actionPolicy = action_policy
@@ -34,11 +34,13 @@ class ActionHandler:
         self.countRand = 0
         self.actionCount = 0
 
-        self.actions = actions
         if actions is not None:
             self.numActions = len(actions)
+            self.actions = None
+            self.set_legal_actions(actions)
         else:
             self.numActions = 0
+            self.actions = actions
 
     def get_action(self, action_values, random=True):
         """
@@ -56,7 +58,8 @@ class ActionHandler:
 
         Returns
         -------
-        Index of max action value.
+        action_ind : int
+            Index of max action value.
         """
         if random:
             if self.actionPolicy == ActionPolicy.eGreedy:
@@ -105,7 +108,8 @@ class ActionHandler:
 
         Returns
         -------
-        Action index relative to learner output vector
+        action_ind : int
+            Action index relative to learner output vector
         """
         return np.where(action == self.actions)[0][0]
 
@@ -122,57 +126,10 @@ class ActionHandler:
 
         Returns
         -------
-        ALE ready action id
+        ale_action_ind : int
+            ALE ready action id
         """
         return self.actions[self.get_action(action_vect, random)]
-
-
-class ActionHandlerTiring(ActionHandler):
-    """
-    :class:`ActionHandlerTiring` is a work in progress to create an action handler that forces the learner to try new actions
-    by decreasing values in the action vector that have been tried often.
-    Currently not finished.
-
-     Parameters
-     ----------
-     action_policy : a :class:`ActionPolicy`
-        Specifies whether using eGreedy or adding randVals to the action value vector
-     random_values : a tuple that specifies which values to use for the action policy
-        (Initial random value, ending random value, number of steps to anneal over)
-     actions : the legal actions from the :class:`libs.ale_python_interface.ALEInterface`
-    """
-    def __init__(self, random_values, actions):
-        self.actions = actions
-        self.lastAction = 0
-        self.lastActionInd = 0
-
-        self.numActions = len(actions)
-        self.inhibitor = np.zeros(len(actions))
-
-    def get_action(self, action_values, inhibit=True):
-        if inhibit:
-            # action_values
-            action_values = np.where(action_values == np.max(action_values))[0][0]
-            if self.actionPolicy == ActionPolicy.eGreedy:
-                # egreedy policy to choose random action_values
-                if np.random.uniform(0, 1) <= self.randVal:
-                    action_values = np.random.randint(self.numActions)
-                    self.countRand += 1
-                # else:
-
-            elif self.actionPolicy == ActionPolicy.randVals:
-                assert np.iterable(action_values)
-                action_values += np.random.randn(self.numActions) * self.randVal
-                action_values = np.where(action_values == np.max(action_values))[0][0]
-
-
-        return self.actions[action_values], action_values
-
-    def game_over(self):
-        """
-        Resets inhibition values to 0
-        """
-        self.inhibitor = np.zeros(len(self.actions))
 
 
 from enum import Enum

@@ -3,6 +3,7 @@ import theano.tensor as T
 import theano.tensor.signal.downsample as downsample
 import lasagne
 from lasagne.layers import *
+import lasagne.layers.dnn
 import numpy as np
 
 
@@ -11,19 +12,16 @@ class CNN:
         self.l_in = lasagne.layers.InputLayer(inpShape)
 
         if stride is None:
-            self.l_hid1 = lasagne.layers.Conv2DLayer(self.l_in, 16, (8, 8), untie_biases=True)
+            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), untie_biases=True)
         else:
-            self.l_hid1 = lasagne.layers.Conv2DLayer(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=True)
-
-        self.l_pool1 = lasagne.layers.MaxPool2DLayer(self.l_hid1, 2)
+            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=True)       
 
         if stride is None:
-            self.l_hid2 = lasagne.layers.Conv2DLayer(self.l_pool1, 32, (4, 4), untie_biases=True)
+            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), untie_biases=True)
         else:
-            self.l_hid2 = lasagne.layers.Conv2DLayer(self.l_pool1, 32, (4, 4), stride=stride[1], untie_biases=True)
-        self.l_pool2 = lasagne.layers.MaxPool2DLayer(self.l_hid2, 2)
+            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), stride=stride[1], untie_biases=True)        
 
-        self.l_hid3 = lasagne.layers.DenseLayer(self.l_pool2, 256)
+        self.l_hid3 = lasagne.layers.DenseLayer(self.l_hid2, 256)
         self.l_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear)
 
         net_output = lasagne.layers.get_output(self.l_out)
@@ -95,9 +93,9 @@ class AlloEggoCnn:
         self.input = T.tensor4()
         # allocentric lasagne setup
         self.a_in = lasagne.layers.InputLayer(inpShape, input_var=self.input)
-        self.a_hid1 = lasagne.layers.Conv2DLayer(self.a_in, 16, (8, 8))
+        self.a_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_in, 16, (8, 8))
         self.a_pool1 = lasagne.layers.MaxPool2DLayer(self.a_hid1, 2)
-        self.a_hid2 = lasagne.layers.Conv2DLayer(self.a_pool1, 32, (4, 4))
+        self.a_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_pool1, 32, (4, 4))
         self.a_spp = SPPLayer(self.a_hid2)
         self.a_hid3 = lasagne.layers.DenseLayer(self.a_spp, 256)
         self.a_out = lasagne.layers.DenseLayer(self.a_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear)
@@ -105,9 +103,9 @@ class AlloEggoCnn:
         # egocentric lasagne setup
         self.e_input = self.input[:, :, 43:, :]
         self.l_in = lasagne.layers.InputLayer((inpShape[0], inpShape[1], 43, 80), input_var=self.e_input)
-        self.l_hid1 = lasagne.layers.Conv2DLayer(self.l_in, 16, (8, 8), W=self.a_hid1.W, b=self.a_hid1.b)
+        self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), W=self.a_hid1.W, b=self.a_hid1.b)
         self.l_pool1 = lasagne.layers.MaxPool2DLayer(self.l_hid1, 2)
-        self.l_hid2 = lasagne.layers.Conv2DLayer(self.l_pool1, 32, (4, 4), W=self.a_hid2.W, b=self.a_hid2.b)
+        self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_pool1, 32, (4, 4), W=self.a_hid2.W, b=self.a_hid2.b)
         self.l_spp = SPPLayer(self.l_hid2)
         self.l_hid3 = lasagne.layers.DenseLayer(self.l_spp, 256, W=self.a_hid3.W, b=self.a_hid3.b)
         self.e_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear,
@@ -187,9 +185,9 @@ class AlloEggoSeperateCnn:
         self.input = T.tensor4()
         # allocentric lasagne setup
         self.a_in = lasagne.layers.InputLayer((None, 4, 105, 80), input_var=self.input)
-        self.a_hid1 = lasagne.layers.Conv2DLayer(self.a_in, 16, (8, 8))
+        self.a_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_in, 16, (8, 8))
         self.a_pool1 = lasagne.layers.MaxPool2DLayer(self.a_hid1, 2)
-        self.a_hid2 = lasagne.layers.Conv2DLayer(self.a_pool1, 32, (4, 4))
+        self.a_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_pool1, 32, (4, 4))
         self.a_spp = SPPLayer(self.a_hid2)
         self.a_hid3 = lasagne.layers.DenseLayer(self.a_spp, 256)
         self.a_out = lasagne.layers.DenseLayer(self.a_hid3, 3, nonlinearity=lasagne.nonlinearities.linear)
@@ -197,9 +195,9 @@ class AlloEggoSeperateCnn:
         # egocentric lasagne setup
         self.e_input = self.input[:, :, 47:, :]
         self.l_in = lasagne.layers.InputLayer((None, 4, 58, 80), input_var=self.e_input)
-        self.l_hid1 = lasagne.layers.Conv2DLayer(self.l_in, 16, (8, 8))#, W=self.a_hid1.W, b=self.a_hid1.b)
+        self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8))#, W=self.a_hid1.W, b=self.a_hid1.b)
         self.l_pool1 = lasagne.layers.MaxPool2DLayer(self.l_hid1, 2)
-        self.l_hid2 = lasagne.layers.Conv2DLayer(self.l_pool1, 32, (4, 4))#, W=self.a_hid2.W, b=self.a_hid2.b)
+        self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_pool1, 32, (4, 4))#, W=self.a_hid2.W, b=self.a_hid2.b)
         self.l_spp = SPPLayer(self.l_hid2)
         self.l_hid3 = lasagne.layers.DenseLayer(self.l_spp, 256)#, W=self.a_hid3.W, b=self.a_hid3.b)
         self.e_out = lasagne.layers.DenseLayer(self.l_hid3, 3, nonlinearity=lasagne.nonlinearities.linear)#,

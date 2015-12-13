@@ -60,6 +60,3 @@ def test_binary_tree_pop_max():
     assert btree.root.value == -1
 
 
-if __name__ == '__main__':
-    pytest.main()
-
