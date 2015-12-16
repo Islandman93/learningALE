@@ -35,6 +35,30 @@ class Node:
             term = 1
         return ret_val, extra_vals, hanging_left, term
 
+    def pop_min(self):
+        if self.left:
+            ret_val, extra_vals, hanging_right, term = self.left.pop_min()
+
+            if term:
+                del self.left
+                self.left = hanging_right
+            term = 0
+        else:
+            ret_val = self.value
+            extra_vals = self.extra_vals
+            hanging_right = self.right
+            term = 1
+        return ret_val, extra_vals, hanging_right, term
+
+    def update_extra_vals(self, compare_fn, update_fn):
+        if self.left:
+            self.left.update_extra_vals(compare_fn, update_fn)
+        if self.right:
+            self.right.update_extra_vals(compare_fn, update_fn)
+
+        if compare_fn(self.extra_vals):
+            self.extra_vals = update_fn(self.extra_vals)
+
     def get_size(self):
         size = 1  # 1 includes this node
         if self.left:
@@ -82,6 +106,16 @@ class BinaryTree:
             self.root = hanging_left
         return val, extra_vals
 
+    def pop_min(self):
+        val, extra_vals, hanging_right, term = self.root.pop_min()
+        # if terminal node, we are popping the root, set new root to hanging_left
+        if term:
+            self.root = hanging_right
+        return val, extra_vals
+
+    def get_size(self):
+        return self.root.get_size()
+
     def plot(self):
         depth = self.root.depth()
         node_yx_vals = list()
@@ -94,3 +128,6 @@ class BinaryTree:
         for ind, val in enumerate(yx_list[:, 2]):
             ax.annotate('{:03.3f}'.format(val), (yx_list[ind, 1], yx_list[ind, 0]*-1))
         plt.show()
+
+    def update_extra_vals(self, compare_fn, update_fn):
+        self.root.update_extra_vals(compare_fn, update_fn)

@@ -5,12 +5,8 @@ import numpy as np
 
 
 class PrioritizedExperienceHandler(ExperienceHandler):
-    def __init__(self, max_len, num_actions, discount, dtype=np.float32):
+    def __init__(self, max_len):
         super().__init__(max_len)
-        self.num_actions = num_actions
-        self.dtype = dtype
-        self.discount = discount
-        self.costList = list()
         self.tree = BinaryTree()
 
     def add_experience(self, state, action, reward):
@@ -57,4 +53,31 @@ class PrioritizedExperienceHandler(ExperienceHandler):
             self.tree.insert(td_error, ind)
 
     def trim(self):
-        super().trim()
+        """
+        Trims/removes lowest td_errors until self.size < self.max_len. Moves terminal indicators to their new
+        respective indexes. This code is not meant to be fast so it should not be called each timestep.
+        """
+        while self.tree.get_size() > self.max_len:
+            val, ind = self.tree.pop_min()
+            del self.states[ind]
+            del self.rewards[ind]
+            del self.actions[ind]
+
+            # update extra_vals
+            def compare_extra_vals(e_val):
+                return e_val >= ind
+
+            def extra_vals_update(e_val):
+                return e_val - 1
+
+            # if we are deleting a state we need to decrement the terminal state indicators
+            new_term = list()
+            for terminal in self.term_states:
+                if compare_extra_vals(terminal):
+                    new_val = extra_vals_update(terminal)
+                    if new_val >= 0:  # if terminal state is being deleted don't keep it
+                        new_term.append(new_val)
+
+            self.term_states = set(new_term)
+            self.tree.update_extra_vals(compare_extra_vals, extra_vals_update)
+            self.size -= 1
