@@ -3,31 +3,44 @@ import theano.tensor as T
 import theano.tensor.signal.downsample as downsample
 import lasagne
 from lasagne.layers import *
-import lasagne.layers.dnn
 import numpy as np
 
 
 class CNN:
     def __init__(self, inpShape, outputNum, clip=None, stride=(4, 2)):
+        from theano.sandbox.cuda import dnn
+        # if no dnn support use default conv
+        if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+            import lasagne.layers.conv
+            conv = lasagne.layers.conv.Conv2DLayer
+        else:
+            import lasagne.layers.dnn
+            conv = lasagne.layers.dnn.Conv2DDNNLayer
+
+        # setup shared vars
+        self.states_for_training = theano.shared(np.zeros((32, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
+        self.states_for_output = theano.shared(np.zeros((1, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
+        self.truths = theano.shared(np.zeros((32, outputNum), dtype=theano.config.floatX))
+        self.mask = theano.shared(np.zeros((32, outputNum), dtype=theano.config.floatX))
+
         self.l_in = lasagne.layers.InputLayer(inpShape)
 
         if stride is None:
-            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), untie_biases=True)
+            self.l_hid1 = conv(self.l_in, 16, (8, 8), untie_biases=True)
         else:
-            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=True)       
+            self.l_hid1 = conv(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=True)
 
         if stride is None:
-            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), untie_biases=True)
+            self.l_hid2 = conv(self.l_hid1, 32, (4, 4), untie_biases=True)
         else:
-            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), stride=stride[1], untie_biases=True)        
+            self.l_hid2 = conv(self.l_hid1, 32, (4, 4), stride=stride[1], untie_biases=True)
 
         self.l_hid3 = lasagne.layers.DenseLayer(self.l_hid2, 256)
         self.l_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear)
 
-        net_output = lasagne.layers.get_output(self.l_out)
-        truth = T.matrix()
-        mask = T.matrix()
-        loss = T.mean(mask*(net_output-truth)**2)
+        net_output = lasagne.layers.get_output(self.l_out, self.states_for_output)
+        net_output_given_states = lasagne.layers.get_output(self.l_out, self.states_for_training)
+        loss = T.mean(self.mask*(net_output_given_states-self.truths)**2)
 
         params = lasagne.layers.get_all_params(self.l_out)
 
@@ -37,12 +50,22 @@ class CNN:
         else:
             grads = T.grad(loss, params)
 
-        update = lasagne.updates.rmsprop(grads, params, 0.002)
+        update_given_states = lasagne.updates.rmsprop(grads, params, 0.0025, 0.99, 0.01)
 
-        self.train = theano.function([self.l_in.input_var, truth, mask], [loss, net_output], updates=update)
-        self.get_output = theano.function([self.l_in.input_var], outputs=net_output)
+        self._train_optimized = theano.function([], [loss, net_output_given_states], updates=update_given_states)
+        self._get_output = theano.function([], outputs=net_output)
         self.get_hid1_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid1))
         self.get_hid2_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid2))
+
+    def train(self, states, truth, mask):
+        self.states_for_training.set_value(states)
+        self.truths.set_value(truth)
+        self.mask.set_value(mask)
+        return self._train_optimized()
+
+    def get_output(self, state):
+        self.states_for_output.set_value(state)
+        return self._get_output()
 
     def load(self, file):
         import pickle
