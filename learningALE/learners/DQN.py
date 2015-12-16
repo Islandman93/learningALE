@@ -3,6 +3,7 @@ from learningALE.handlers.actionhandler import ActionHandler, ActionPolicy
 from learningALE.handlers.experiencehandler import ExperienceHandler
 from learningALE.handlers.trainhandler import TrainHandler
 from learningALE.learners.nns import CNN
+import numpy as np
 
 
 class DQNLearner(learner):
@@ -13,16 +14,22 @@ class DQNLearner(learner):
         self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
 
         self.exp_handler = ExperienceHandler(1000000/skip_frame)
-        self.train_handler = TrainHandler(32, 0.99, num_actions)
-        self.cnn = CNN((None, skip_frame, 86, 80), num_actions, .1)
+        self.train_handler = TrainHandler(32, num_actions)
+        self.cnn = CNN((None, skip_frame, 86, 80), num_actions)
+
+        self.discount = .99
 
         if load is not None:
             self.cnn.load(load)
 
     def frames_processed(self, frames, action_performed, reward):
         self.exp_handler.add_experience(frames, self.action_handler.game_action_to_action_ind(action_performed), reward)
-        self.train_handler.train_exp(self.exp_handler, self.cnn)
+        self.train_handler.train_qlearn(self.exp_handler.get_random_experience, self.get_est_reward, self.cnn)
         self.action_handler.anneal()
+
+    def get_est_reward(self, state_tp1s, terminal):
+        r_tp1 = self.cnn.get_output(state_tp1s)
+        return (1-terminal) * self.discount * np.max(r_tp1, axis=1)
 
     def get_action(self, game_input):
         return self.cnn.get_output(game_input)[0]
