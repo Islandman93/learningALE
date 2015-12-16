@@ -60,7 +60,8 @@ class GameHandler:
 
         Returns
         -------
-        Total reward from game. Can be negative if lives/life_ram_ind is set.
+        int
+            Total reward from game. Can be negative if lives/life_ram_ind is set.
         """
         # if lives and life_ram_ind is specified set negative reward to true
         if lives is not None and life_ram_ind is not None:
