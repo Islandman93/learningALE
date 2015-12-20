@@ -39,7 +39,7 @@ class GameHandler:
         self.frameCount = 0
         self.dtype = dtype
 
-    def run_one_game(self, learner, lives=None, life_ram_ind=None, early_return=False):
+    def run_one_game(self, learner, neg_reward=True, early_return=False):
         """
         Runs a full game. If lives and life_ram_ind are set then will give negative rewards on loss of life
 
@@ -49,11 +49,8 @@ class GameHandler:
             Will call get_game_action and frames_processed.
             get_game_action must return a valid ALE action ind. frames_processed can be a pass.
 
-        lives : int
-            Number of lives at start of game. Default None
-
-        life_ram_ind : int
-            Ram index of where the current lives are stored
+        neg_reward : bool
+            Whether or not to use negative rewards, recieved when agent looses a life
 
         early_return : bool
             If set to true and lives/life_ram_ind are set then will return on first loss of life
@@ -63,15 +60,10 @@ class GameHandler:
         int
             Total reward from game. Can be negative if lives/life_ram_ind is set.
         """
-        # if lives and life_ram_ind is specified set negative reward to true
-        if lives is not None and life_ram_ind is not None:
-            neg_reward = True
-        else:
-            neg_reward = False
-
         total_reward = 0.0
         gamescreen = None
         self.ale.reset_game()
+        cur_lives = self.ale.lives()
         action_to_perform = 0  # initially set at zero because we start the game before asking the learner
         while not self.ale.game_over():
             # get frames
@@ -80,12 +72,11 @@ class GameHandler:
 
             # loop over skip frame
             for frame in range(self.skipFrame):
-                gamescreen = self.ale.getScreenRGB(gamescreen)
+                gamescreen = self.ale.getScreenGrayscale(gamescreen)
 
                 # convert ALE gamescreen into usable image, scaled between 0 and 1
-                processedImg = np.asarray(
-                    imresize(gamescreen.view(np.uint8).reshape(self.screen_height, self.screen_width, 4)[25:-12, :, 0], 0.5, interp='nearest'),
-                    dtype=self.dtype)/255
+                processedImg = np.asarray(imresize(gamescreen[25:-12, :, 0], 0.5, interp='nearest'),
+                                          dtype=self.dtype)/255
                 frames.append(processedImg)
 
                 # act on the action to perform, should be ALE compatible action ind
@@ -97,10 +88,10 @@ class GameHandler:
 
                 # if allowing negative rewards, get RAM and see if lives has decreased
                 if neg_reward:
-                    ram = self.ale.getRAM()
-                    if ram[life_ram_ind] < lives:
+                    new_lives = self.ale.lives()
+                    if new_lives < cur_lives:
                         reward -= 1  # losing a life is a negative 1 reward
-                        lives = ram[life_ram_ind]
+                        cur_lives = new_lives
 
             # end frame skip loop
 
@@ -110,7 +101,7 @@ class GameHandler:
             # frames_processed must be here before action_to_perform gets overwritten.
             learner.frames_processed(frames, action_to_perform, reward)
 
-            action_to_perform = learner.get_game_action(frames.reshape((1, self.skipFrame, frames.shape[1], 80)))
+            action_to_perform = learner.get_game_action(frames.reshape((1, self.skipFrame, frames.shape[1], frames.shape[2])))
 
             self.frameCount += 1*self.skipFrame
 
