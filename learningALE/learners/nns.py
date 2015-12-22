@@ -40,7 +40,7 @@ class CNN:
 
         net_output = lasagne.layers.get_output(self.l_out, self.states_for_output)
         net_output_given_states = lasagne.layers.get_output(self.l_out, self.states_for_training)
-        loss = T.mean(self.mask*(net_output_given_states-self.truths)**2)
+        loss = T.mean((net_output_given_states[T.nonzero(self.mask)]-self.truths[T.nonzero(self.mask)])**2)
 
         params = lasagne.layers.get_all_params(self.l_out)
 

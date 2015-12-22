@@ -10,17 +10,23 @@ class DQNLearner(learner):
     def __init__(self, skip_frame, num_actions, load=None):
         super().__init__()
 
-        rand_vals = (1, 0.1, 1000000/skip_frame)  # starting at 1 anneal eGreedy policy to 0.1 over 1,000,000/skip_frame
+        rand_vals = (1, 0.1, 1000000)  # starting at 1 anneal eGreedy policy to 0.1 over 1,000,000/skip_frame
         self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
 
         self.exp_handler = ExperienceHandler(1000000/skip_frame)
         self.train_handler = TrainHandler(32, num_actions)
-        self.cnn = CNN((None, skip_frame, 86, 80), num_actions)
+        self.cnn = CNN((None, skip_frame, 86, 80), num_actions, 1)
 
         self.discount = .99
 
         if load is not None:
             self.cnn.load(load)
+            self.action_handler = ActionHandler(ActionPolicy.eGreedy, (0.05, 0.05, 2))
+            self.exp_handler = ExperienceHandler(1000000/skip_frame)
+            class dummy():
+                def train_qlearn(self, a, b, c):
+                    return
+            self.train_handler = dummy()
 
     def frames_processed(self, frames, action_performed, reward):
         self.exp_handler.add_experience(frames, self.action_handler.game_action_to_action_ind(action_performed), reward)
