@@ -7,21 +7,21 @@ from learningALE.tools.life_ram_inds import BREAKOUT
 
 
 # setup vars
-rom = b'D:\\_code\\_reinforcementlearning\\breakout.bin'
+rom = b'D:\\_code\\breakout.bin'
 gamename = 'breakout'
 skip_frame = 4
 num_actions = 4
 learner = DQNLearner(skip_frame, num_actions)
 
 
-def main():
+def main(epochs):
+    ep_count = 0
     game_handler = GameHandler(rom, False, learner, skip_frame)
     scoreList = list()
-    validLossList = list()
     bestTotReward = -np.inf
-    # plt.ion()
+    plt.ion()
     st = time.time()
-    for episode in range(20):
+    while game_handler.frameCount/skip_frame < epochs*50000:
         total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT, early_return=True)
         scoreList.append(total_reward)
 
@@ -32,30 +32,32 @@ def main():
             learner.save('dqnbest{0}.pkl'.format(total_reward))
             bestTotReward = total_reward
 
-        # plot cost and score
-        # plt.clf()
-        # plt.subplot(1, 2, 1)
-        # plt.plot(learner.get_cost_list(), '.')
-        # plt.subplot(1, 2, 2)
-        # sl = np.asarray(scoreList)
-        # plt.plot(sl, '.')
-        # plt.pause(0.0001)
-
-        # save params every 10 games
-        if episode % 10 == 0:
-            learner.save('dqn{0}.pkl'.format(episode))
+        # save params every 25000 frames (half an epoch)
+        if (game_handler.frameCount/skip_frame) >= ep_count * 50000:
+            ep_count += 0.5
+            # plot cost and score
+            plt.clf()
+            plt.subplot(1, 2, 1)
+            plt.plot(learner.get_cost_list(), '.')
+            plt.subplot(1, 2, 2)
+            sl = np.asarray(scoreList)
+            plt.plot(sl, '.')
+            plt.pause(0.0001)
+            learner.save('dqn{0}.pkl'.format(game_handler.frameCount/skip_frame))
 
         et = time.time()
-        print("Episode " + str(episode) + " ended with score: " + str(total_reward))
-        print('Total Time:', et - st, 'Frame Count:', game_handler.frameCount, 'FPS:', game_handler.frameCount / (et - st))
+        print("Episode ended with score: " + str(total_reward))
+        print('Total Time:', et - st, 'Updates:', game_handler.frameCount/skip_frame,
+              'UPS:', (game_handler.frameCount/skip_frame) / (et-st),
+              'Frame Count:', game_handler.frameCount, 'FPS:', game_handler.frameCount / (et - st))
 
     # plt.ioff()
     # plt.show()
 
     # final save
-    learner.save('dqn{0}.pkl'.format(episode+1))
+    learner.save('dqn{0}.pkl'.format(game_handler.frameCount/skip_frame))
 
 if __name__ == '__main__':
-    main()
+    main(50)
 
 
