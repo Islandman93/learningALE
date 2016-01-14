@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from learningALE.handlers.gamehandler import GameHandler
 from learningALE.learners.DQN import DQNLearner
-from learningALE.tools.life_ram_inds import BREAKOUT
 
 
 # setup vars
@@ -16,13 +15,13 @@ learner = DQNLearner(skip_frame, num_actions)
 
 def main(epochs):
     ep_count = 0
-    game_handler = GameHandler(rom, False, learner, skip_frame)
+    game_handler = GameHandler(rom, False, skip_frame, learner)
     scoreList = list()
     bestTotReward = -np.inf
     plt.ion()
     st = time.time()
     while game_handler.frameCount/skip_frame < epochs*50000:
-        total_reward = game_handler.run_one_game(learner, lives=5, life_ram_ind=BREAKOUT, early_return=True)
+        total_reward = game_handler.run_one_game(learner, neg_reward=True)
         scoreList.append(total_reward)
 
         learner.game_over()
@@ -32,7 +31,7 @@ def main(epochs):
             learner.save('dqnbest{0}.pkl'.format(total_reward))
             bestTotReward = total_reward
 
-        # save params every 25000 frames (half an epoch)
+        # save params every 25000 updates (half an epoch)
         if (game_handler.frameCount/skip_frame) >= ep_count * 50000:
             ep_count += 0.5
             # plot cost and score
@@ -51,13 +50,13 @@ def main(epochs):
               'UPS:', (game_handler.frameCount/skip_frame) / (et-st),
               'Frame Count:', game_handler.frameCount, 'FPS:', game_handler.frameCount / (et - st))
 
-    # plt.ioff()
-    # plt.show()
+    plt.ioff()
+    plt.show()
 
     # final save
     learner.save('dqn{0}.pkl'.format(game_handler.frameCount/skip_frame))
 
 if __name__ == '__main__':
-    main(50)
+    main(100)
 
 

@@ -17,14 +17,15 @@ class GameHandler:
         Specifies the directory to load the rom from. Must be a byte string: b'dir_for_rom/rom.bin'
     show_rom : boolean
         Whether or not to show the game being played or not. True takes longer to run but can be fun to watch
-    learner : :class:`learners.learner`
-        The learner, on construction GameHandler will call set_legal_actions
     skip_frame : int
         Number of frames to skip using the last action chosen
+    learner : :class:`learners.learner`
+        Default None. The learner, on construction GameHandler will call set_legal_actions. If none then set_legal_actions
+        needs to be called
     dtype : data type
         Specifies the data type to convert the game screen to. Default is np.float16
     """
-    def __init__(self, rom, show_rom, learner, skip_frame, dtype=np.float16):
+    def __init__(self, rom, show_rom, skip_frame, learner=None, dtype=np.float16):
         # set up emulator
         self.ale = ALEInterface(show_rom)
         self.ale.loadROM(rom)
@@ -34,12 +35,13 @@ class GameHandler:
         # set up vars
         self.skipFrame = skip_frame
 
-        learner.set_legal_actions(legal_actions)
+        if learner:
+            learner.set_legal_actions(legal_actions)
 
         self.frameCount = 0
         self.dtype = dtype
 
-    def run_one_game(self, learner, neg_reward=True, early_return=False):
+    def run_one_game(self, learner, neg_reward=True, early_return=False, clip=True):
         """
         Runs a full game. If lives and life_ram_ind are set then will give negative rewards on loss of life
 
@@ -54,6 +56,8 @@ class GameHandler:
 
         early_return : bool
             If set to true and lives/life_ram_ind are set then will return on first loss of life
+        clip : bool
+            Whether or not to clip positive rewards to 1
 
         Returns
         -------
@@ -83,8 +87,10 @@ class GameHandler:
                 rew = self.ale.act(action_to_perform)
 
                 # clip positive rewards to 1
-                if rew > 0:
+                if rew > 0 and clip:
                     reward += 1
+                else:
+                    reward += rew
 
                 # if allowing negative rewards, get RAM and see if lives has decreased
                 if neg_reward:
@@ -111,6 +117,9 @@ class GameHandler:
 
         # end of game
         return total_reward
+
+    def set_legal_actions(self, learner):
+        learner.set_legal_actions(self.ale.getMinimalActionSet())
 
 
 class GameHandlerRam(GameHandler):

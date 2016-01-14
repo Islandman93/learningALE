@@ -13,13 +13,14 @@ class ExperienceHandler:
     max_len : int
        Specifies the maximum number of states/rewards/actions to store.
     """
-    def __init__(self, max_len):
+    def __init__(self, max_len, replay_start_size=100):
         self.states = list()
         self.rewards = list()
         self.actions = list()
         self.term_states = set()
         self.size = 0
         self.max_len = max_len
+        self.replay_start_size = replay_start_size
 
     def add_experience(self, state, action, reward):
         """
@@ -77,12 +78,12 @@ class ExperienceHandler:
         states_tp1 : numpy.array(dtype)
          Numpy.array of dtype with shape (mini_batch,) + (state.shape). Will be zeros if terminal is 1 for the
          corresponding state
-        terminal : numpy.array(bool)
+        terminal : numpy.array(int)
          Whether a state is terminal or not
         indexes : numpy.array(int)
          Index of where this return is stored in lists. Mostly unused except for testing
         """
-        if self.size <= mini_batch:
+        if self.size <= self.replay_start_size:
             return None, None, None, None, None, None
 
         # Design decision: I know this can return duplicates, but is unlikely when size is large
@@ -108,7 +109,7 @@ class ExperienceHandler:
                 mb_states_tp1[exp] = self.states[exp_ind+1]
 
         mb_actions = np.asarray(mb_actions, dtype=int)
-        mb_rewards = np.asarray(mb_rewards, dtype=dtype)
+        mb_rewards = np.asarray(mb_rewards, dtype=int)
         mb_terminal = np.asarray(mb_terminal, dtype=int)
         mb_inds = np.asarray(mb_inds, dtype=int)
         return mb_states, mb_actions, mb_rewards, mb_states_tp1, mb_terminal, mb_inds
