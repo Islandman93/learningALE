@@ -57,6 +57,6 @@ def main(epochs):
     learner.save('dqn{0}.pkl'.format(game_handler.frameCount/skip_frame))
 
 if __name__ == '__main__':
-    main(100)
+    main(50)
 
 

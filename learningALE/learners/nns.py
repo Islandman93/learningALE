@@ -25,7 +25,7 @@ class CNN:
         self.states_for_output = theano.shared(np.zeros((1, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
         self.truths = theano.shared(np.zeros((32, outputNum), dtype=theano.config.floatX))
         self.terminals = theano.shared(np.zeros(32, dtype=int))
-        self.rewards = theano.shared(np.zeros(32, dtype=int))
+        self.rewards = theano.shared(np.zeros(32, dtype=theano.config.floatX))
         self.actions = theano.shared(np.zeros(32, dtype=int))
 
         # setup network layout
@@ -56,17 +56,12 @@ class CNN:
                                 b=lasagne.init.Constant(.1))
 
         # network output vars
-        net_output = lasagne.layers.get_output(self.l_out, self.states_for_output)
-        net_output_statetp1 = lasagne.layers.get_output(self.l_out, self.states_tp1)
+        net_output = lasagne.layers.get_output(self.l_out, self.states_for_output/255.0)
+        net_output_statetp1 = lasagne.layers.get_output(self.l_out, self.states_tp1/255.0)
         net_output_statetp1 = theano.gradient.disconnected_grad(net_output_statetp1)
-        net_output_training = lasagne.layers.get_output(self.l_out, self.states_for_training)
+        net_output_training = lasagne.layers.get_output(self.l_out, self.states_for_training/255.0)
 
         # setup qlearning values and loss
-        # target = (self.rewards +
-        #           (1 - self.terminals) *
-        #           0.95 * T.max(net_output_statetp1, axis=1))
-        # diff = target - net_output_training[T.arange(32),
-        #                        self.actions]
         est_rew_tp1 = (1-self.terminals) * 0.95 * T.max(net_output_statetp1, axis=1)
         rewards = self.rewards + est_rew_tp1
         diff = rewards - net_output_training[T.arange(32), self.actions]

@@ -79,8 +79,7 @@ class GameHandler:
                 gamescreen = self.ale.getScreenGrayscale(gamescreen)
 
                 # convert ALE gamescreen into usable image, scaled between 0 and 1
-                processedImg = np.asarray(imresize(gamescreen[25:-12, :, 0], 0.5, interp='nearest'),
-                                          dtype=self.dtype)/255
+                processedImg = imresize(gamescreen[25:-12, :, 0], 0.5, interp='nearest')
                 frames.append(processedImg)
 
                 # act on the action to perform, should be ALE compatible action ind
@@ -107,7 +106,7 @@ class GameHandler:
             # frames_processed must be here before action_to_perform gets overwritten.
             learner.frames_processed(frames, action_to_perform, reward)
 
-            action_to_perform = learner.get_game_action(frames.reshape((1, self.skipFrame, frames.shape[1], frames.shape[2])))
+            action_to_perform = learner.get_game_action(frames)
 
             self.frameCount += 1*self.skipFrame
 
