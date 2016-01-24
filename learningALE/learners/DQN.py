@@ -20,14 +20,15 @@ class DQNLearner(learner):
         self.skip_frame = skip_frame
         self.discount = .95
         self.costList = list()
+        self.state_tm1 = None
 
         if load is not None:
             self.cnn.load(load)
 
     def frames_processed(self, frames, action_performed, reward):
         game_action = self.action_handler.game_action_to_action_ind(action_performed)
-        for frame in frames:
-            self.exp_handler.add_sample(frame, game_action, reward, False)
+        if self.state_tm1 is not None:
+            self.exp_handler.add_sample(self.state_tm1, game_action, reward, False)
 
         # generate minibatch data
         if self.exp_handler.size > self.minimum_replay_size:
@@ -36,14 +37,17 @@ class DQNLearner(learner):
             self.costList.append(cost)
             self.action_handler.anneal()
 
-    def get_action(self, game_input):
-        return self.cnn.get_output(game_input)[0]
+        self.state_tm1 = frames[-1]
+
+    def get_action(self, processed_screens):
+        return self.cnn.get_output(processed_screens)[0]
 
     def game_over(self):
         self.exp_handler.add_terminal()  # adds a terminal
 
-    def get_game_action(self, game_input):
-        return self.action_handler.action_vect_to_game_action(self.get_action(game_input.reshape((1, self.skip_frame, 86, 80))))
+    def get_game_action(self):
+        return self.action_handler.action_vect_to_game_action(
+            self.get_action(self.exp_handler.phi(self.state_tm1).reshape(1, self.skip_frame, 86, 80)))
 
     def set_legal_actions(self, legal_actions):
         self.action_handler.set_legal_actions(legal_actions)
@@ -63,14 +67,19 @@ class DQNTester:
         self.cnn.load(load)
         self.q_vals = list()
         self.skip_frame = skip_frame
+        self.exp_handler = DataSet(80, 86, np.random.RandomState(), phi_length=skip_frame)
+        self.skip_frame = skip_frame
+        self.state_tm1 = np.zeros((86, 80), dtype=np.uint8)
 
-    def get_game_action(self, game_input):
-        q_vals = self.cnn.get_output(game_input.reshape((1, self.skip_frame, 86, 80)))[0]
+    def get_game_action(self):
+        q_vals = self.cnn.get_output(self.exp_handler.phi(self.state_tm1).reshape(1, self.skip_frame, 86, 80))[0]
         self.q_vals.append(q_vals)
         return self.action_handler.action_vect_to_game_action(q_vals)
 
-    def frames_processed(self, a, b, c):
-        pass
+    def frames_processed(self, frames, action_performed, reward):
+        game_action = self.action_handler.game_action_to_action_ind(action_performed)
+        self.exp_handler.add_sample(self.state_tm1, game_action, reward, False)
+        self.state_tm1 = frames[-1]
 
     def set_legal_actions(self, legal_actions):
         self.action_handler.set_legal_actions(legal_actions)

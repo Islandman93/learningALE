@@ -106,7 +106,7 @@ class GameHandler:
             # frames_processed must be here before action_to_perform gets overwritten.
             learner.frames_processed(frames, action_to_perform, reward)
 
-            action_to_perform = learner.get_game_action(frames)
+            action_to_perform = learner.get_game_action()
 
             self.frameCount += 1*self.skipFrame
 
