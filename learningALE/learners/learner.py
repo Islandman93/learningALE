@@ -10,7 +10,7 @@ class learner(metaclass=ABCMeta):
     def frames_processed(self, frames, action_performed, reward):
         pass
 
-    def get_game_action(self, game_input):
+    def get_game_action(self):
         pass
 
     def set_legal_actions(self, legal_actions):

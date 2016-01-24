@@ -1,4 +1,5 @@
 from learningALE.learners.DQN import DQNLearner
+import numpy as np
 
 
 class TargetDQNLearner(DQNLearner):
@@ -9,7 +10,6 @@ class TargetDQNLearner(DQNLearner):
     def copy_new_target(self):
         self.target_cnn = self.cnn.copy()
 
-    def frames_processed(self, frames, action_performed, reward):
-        self.exp_handler.add_experience(frames, self.action_handler.game_action_to_action_ind(action_performed), reward)
-        self.train_handler.train_target(self.exp_handler, self.cnn, self.target_cnn)
-        self.action_handler.anneal()
+    def get_est_reward(self, state_tp1s, terminal):
+        r_tp1 = self.target_cnn.get_output(state_tp1s)
+        return (1-terminal) * self.discount * np.max(r_tp1, axis=1)

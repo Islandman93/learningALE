@@ -20,6 +20,21 @@ handlers.experiencehandler module
     :undoc-members:
     :show-inheritance:
 
+handlers.prioritizedexperiencehandler module
+--------------------------------------------
+
+.. automodule:: handlers.prioritizedexperiencehandler
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+handlers.binarytree module
+--------------------------
+.. automodule:: handlers.binarytree
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 handlers.gamehandler module
 ---------------------------
 

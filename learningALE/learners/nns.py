@@ -1,48 +1,92 @@
 import theano
+import theano.gradient
 import theano.tensor as T
 import theano.tensor.signal.downsample as downsample
 import lasagne
 from lasagne.layers import *
-import lasagne.layers.dnn
 import numpy as np
 
 
 class CNN:
-    def __init__(self, inpShape, outputNum, clip=None, stride=(4, 2)):
+    def __init__(self, inpShape, outputNum, clip=None, stride=(4, 2), untie_biases=False):
+        import theano.tensor.signal.conv
+        from theano.sandbox.cuda import dnn
+        # if no dnn support use default conv
+        if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+            import lasagne.layers.conv
+            conv = lasagne.layers.conv.Conv2DLayer
+        else:
+            import lasagne.layers.dnn
+            conv = lasagne.layers.dnn.Conv2DDNNLayer
+
+        # setup shared vars
+        self.states_for_training = theano.shared(np.zeros((32, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
+        self.states_tp1 = theano.shared(np.zeros((32, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
+        self.states_for_output = theano.shared(np.zeros((1, inpShape[1], inpShape[2], inpShape[3]), dtype=theano.config.floatX))
+        self.truths = theano.shared(np.zeros((32, outputNum), dtype=theano.config.floatX))
+        self.terminals = theano.shared(np.zeros(32, dtype=int))
+        self.rewards = theano.shared(np.zeros(32, dtype=theano.config.floatX))
+        self.actions = theano.shared(np.zeros(32, dtype=int))
+
+        # setup network layout
         self.l_in = lasagne.layers.InputLayer(inpShape)
+        if stride is None:
+            self.l_hid1 = conv(self.l_in, 16, (8, 8), untie_biases=untie_biases,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
+        else:
+            self.l_hid1 = conv(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=untie_biases,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
 
         if stride is None:
-            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), untie_biases=True)
+            self.l_hid2 = conv(self.l_hid1, 32, (4, 4), untie_biases=untie_biases,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
         else:
-            self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), stride=stride[0], untie_biases=True)       
+            self.l_hid2 = conv(self.l_hid1, 32, (4, 4), stride=stride[1], untie_biases=untie_biases,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
 
-        if stride is None:
-            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), untie_biases=True)
-        else:
-            self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_hid1, 32, (4, 4), stride=stride[1], untie_biases=True)        
+        self.l_hid3 = lasagne.layers.DenseLayer(self.l_hid2, 256,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
+        self.l_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear,
+                                W=lasagne.init.Normal(.01),
+                                b=lasagne.init.Constant(.1))
 
-        self.l_hid3 = lasagne.layers.DenseLayer(self.l_hid2, 256)
-        self.l_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear)
+        # network output vars
+        net_output = lasagne.layers.get_output(self.l_out, self.states_for_output/255.0)
+        net_output_statetp1 = lasagne.layers.get_output(self.l_out, self.states_tp1/255.0)
+        net_output_statetp1 = theano.gradient.disconnected_grad(net_output_statetp1)
+        net_output_training = lasagne.layers.get_output(self.l_out, self.states_for_training/255.0)
 
-        net_output = lasagne.layers.get_output(self.l_out)
-        truth = T.matrix()
-        mask = T.matrix()
-        loss = T.mean(mask*(net_output-truth)**2)
-
+        # setup qlearning values and loss
+        est_rew_tp1 = (1-self.terminals) * 0.95 * T.max(net_output_statetp1, axis=1)
+        rewards = self.rewards + est_rew_tp1
+        diff = rewards - net_output_training[T.arange(32), self.actions]
+        loss = T.mean(diff**2)
+        # loss = T.mean(diff**2)
+        # # get layaer parms
         params = lasagne.layers.get_all_params(self.l_out)
+        rms_update = lasagne.updates.rmsprop(loss, params, 0.0002, 0.99)
 
-        # if clipping the grad
-        if clip is not None:
-            grads = lasagne.updates.total_norm_constraint(T.grad(loss, params), clip)
-        else:
-            grads = T.grad(loss, params)
-
-        update = lasagne.updates.rmsprop(grads, params, 0.002)
-
-        self.train = theano.function([self.l_in.input_var, truth, mask], [loss, net_output], updates=update)
-        self.get_output = theano.function([self.l_in.input_var], outputs=net_output)
+        self._train_optimized = theano.function([], loss, updates=rms_update)
+        self._get_output = theano.function([], outputs=net_output)
         self.get_hid1_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid1))
         self.get_hid2_act = theano.function([self.l_in.input_var], outputs=lasagne.layers.get_output(self.l_hid2))
+
+    def train(self, states, actions, rewards, state_tp1s, terminal):
+        self.states_for_training.set_value(states)
+        self.actions.set_value(actions)
+        self.rewards.set_value(rewards)
+        self.states_tp1.set_value(state_tp1s)
+        self.terminals.set_value(terminal)
+        return self._train_optimized()
+
+    def get_output(self, state):
+        self.states_for_output.set_value(state)
+        return self._get_output()
 
     def load(self, file):
         import pickle
