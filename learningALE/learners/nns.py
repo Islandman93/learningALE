@@ -272,3 +272,57 @@ class AlloEggoSeperateCnn:
         self.train = trainBoth
         self.get_output = theano.function([self.input], outputs=(allo_output+ego_output)/2)
         # self.get_output = theano.function([self.input], outputs=(ego_output))
+
+def create_NIPS(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
+    import theano.tensor.signal.conv
+    from theano.sandbox.cuda import dnn
+    # if no dnn support use default conv
+    if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+        import lasagne.layers.conv
+        conv = lasagne.layers.conv.Conv2DLayer
+    else:
+        import lasagne.layers.dnn
+        conv = lasagne.layers.dnn.Conv2DDNNLayer
+
+    # setup network layout
+    l_in = lasagne.layers.InputLayer(inp_shape, input_var=input_var)
+    l_hid1 = conv(l_in, 16, (8, 8), stride=stride[0], untie_biases=untie_biases,
+                        W=lasagne.init.Normal(.01),
+                        b=lasagne.init.Constant(.1))
+
+    l_hid2 = conv(l_hid1, 32, (4, 4), stride=stride[1], untie_biases=untie_biases,
+                        W=lasagne.init.Normal(.01),
+                        b=lasagne.init.Constant(.1))
+
+    l_hid3 = lasagne.layers.DenseLayer(l_hid2, 256,
+                        W=lasagne.init.Normal(.01),
+                        b=lasagne.init.Constant(.1))
+
+    l_out = lasagne.layers.DenseLayer(l_hid3, output_num, nonlinearity=lasagne.nonlinearities.linear,
+                        W=lasagne.init.Normal(.01),
+                        b=lasagne.init.Constant(.1))
+
+    return {'l_in': l_in, 'l_hid1': l_hid1, 'l_hid2': l_hid2, 'l_hid3': l_hid3, 'l_out': l_out}
+
+def create_Async(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
+    import theano.tensor.signal.conv
+    from theano.sandbox.cuda import dnn
+    # if no dnn support use default conv
+    if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+        import lasagne.layers.conv
+        conv = lasagne.layers.conv.Conv2DLayer
+    else:
+        import lasagne.layers.dnn
+        conv = lasagne.layers.dnn.Conv2DDNNLayer
+
+    # setup network layout
+    l_in = lasagne.layers.InputLayer(inp_shape, input_var=input_var)
+    l_hid1 = conv(l_in, 16, (8, 8), stride=stride[0], untie_biases=untie_biases)
+
+    l_hid2 = conv(l_hid1, 32, (4, 4), stride=stride[1], untie_biases=untie_biases)
+
+    l_hid3 = lasagne.layers.DenseLayer(l_hid2, 256)
+
+    l_out = lasagne.layers.DenseLayer(l_hid3, output_num, nonlinearity=lasagne.nonlinearities.linear)
+
+    return {'l_in': l_in, 'l_hid1': l_hid1, 'l_hid2': l_hid2, 'l_hid3': l_hid3, 'l_out': l_out}
