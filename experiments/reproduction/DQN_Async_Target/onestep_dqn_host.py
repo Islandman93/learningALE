@@ -24,14 +24,16 @@ class Async1StepQLearnerHost:
     skip_frame : int
         Number of frames to skip using the last action chosen
     """
-    def __init__(self, host_cnn, learners, rom, show_rom):
+    def __init__(self, host_cnn, learners, rom, show_rom, target_updates=4000):
         # create host cnn
         self.cnn = host_cnn
+        self.target_update = target_updates
         # create partial function to create game handlers
         game_handler_partial = partial(MinimalGameHandler, rom, show_rom)
         # setup learners and emulators
         self.learner_pipes = list()
         self.learner_processes = list()
+        self.learner_steps = list()
         for learner_partial in learners:
             # create pipe
             parent_conn, child_conn = Pipe()
@@ -42,6 +44,7 @@ class Async1StepQLearnerHost:
 
             self.learner_pipes.append(parent_conn)
             self.learner_processes.append(learner_process)
+            self.learner_steps.append(0)
 
     def start(self):
         for learner in self.learner_pipes:
@@ -51,16 +54,24 @@ class Async1StepQLearnerHost:
 
     def busy_wait(self):
         while True:
-            for learner in self.learner_pipes:
+            for learner_ind, learner in enumerate(self.learner_pipes):
                 if learner.poll():
-                    self.process_pipe(learner)
+                    self.process_pipe(learner_ind, learner)
 
-    def process_pipe(self, pipe):
+    def process_pipe(self, learner_ind, pipe):
         pipe_cmd, extras = pipe.recv()
         if pipe_cmd == PipeCmds.ClientSendingGradients:
             self.cnn.gradient_step(extras)
             # send back new parameters to client
             pipe.send((PipeCmds.HostSendingGlobalParameters, self.cnn.get_parameters()))
+        elif pipe_cmd == PipeCmds.ClientSendingSteps:
+            self.learner_steps[learner_ind] = extras
+            if sum(self.learner_steps) % self.target_update == 0:
+                self.send_target_updates()
+
+    def send_target_updates(self):
+        for learner in self.learner_pipes:
+            learner.send((PipeCmds.HostSendingGlobalTarget, self.cnn.get_parameters()))
 
     def block_until_done(self):
         self.end_processes()

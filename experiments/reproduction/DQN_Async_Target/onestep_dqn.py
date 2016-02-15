@@ -11,7 +11,7 @@ def main():
 
     from functools import partial
 
-    learner_count = 8
+    learner_count = 2
     learners = list()
 
     cnn = AsyncTargetCNN((1, 4, 84, 84), num_actions)
@@ -19,11 +19,7 @@ def main():
     for learner in range(learner_count):
         learners.append(partial(Async1StepDQNLearner, num_actions, cnn.get_parameters()))
 
-
-    import lasagne
-    # print(lasagne.layers.get_all_params(cnn.l_out))
-    # exit()
-    multiprochandler = Async1StepQLearnerHost(cnn, learners, rom, True)
+    multiprochandler = Async1StepQLearnerHost(cnn, learners, rom, False)
 
     import time
     st = time.time()

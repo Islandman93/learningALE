@@ -63,8 +63,6 @@ class AsyncTargetCNN:
     def gradient_step(self, gradients):
         self._gradient_step(*gradients)  # I love python http://stackoverflow.com/questions/3941517/converting-list-to-args-in-python
 
-    # def parse_grad_list(self, gradients):
-
     def set_parameters(self, new_parms):
         lasagne.layers.set_all_param_values(self.l_out, new_parms)
 

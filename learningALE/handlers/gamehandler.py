@@ -175,4 +175,3 @@ class MinimalGameHandler:
 
     def get_legal_actions(self):
         return self.ale.getMinimalActionSet()
-    
