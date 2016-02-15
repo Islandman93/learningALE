@@ -5,7 +5,7 @@ import numpy as np
 # prioritized experience handler uses base experience handler, so just test what's different
 @pytest.fixture(scope='module')
 def p_exp_handler():
-    p_exp = PrioritizedExperienceHandler(2)
+    p_exp = PrioritizedExperienceHandler(2, 2)
     return p_exp
 
 

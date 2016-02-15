@@ -120,3 +120,59 @@ class GameHandler:
 
     def set_legal_actions(self, learner):
         learner.set_legal_actions(self.ale.getMinimalActionSet())
+
+    def get_legal_actions(self):
+        return self.ale.getMinimalActionSet()
+
+
+class MinimalGameHandler:
+    """
+    The :class:`MinimalGameHandler` class takes care of the interface to the ALE and tries to do nothing else. It's
+    meant for advanced users who need fine control over every aspect of the process. It has many functions that are simply
+    wrappers of the underlying ALE but with pythonic names/usage.
+
+    Parameters
+    ----------
+    rom : byte string
+        Specifies the directory to load the rom from. Must be a byte string: b'dir_for_rom/rom.bin'
+    show_rom : boolean
+        Default False. Whether or not to show the game. True takes longer to run but can be fun to watch
+    """
+    def __init__(self, rom, show_rom=False):
+        # set up emulator
+        self.ale = ALEInterface(show_rom)
+        self.ale.loadROM(rom)
+
+        # setup gamescreen object. I think this is faster than recreating an empty each time
+        width, height = self.ale.getScreenDims()
+        self.gamescreen = np.empty((height, width, 1), dtype=np.uint8)
+
+    def reset(self):
+        self.ale.reset_game()
+
+    def step(self, action, skip_frame=1, clip=None):
+        reward = 0
+        for frame in range(skip_frame):
+            if clip is not None:
+                reward += np.clip(self.ale.act(action), 0, clip)
+            else:
+                reward += self.ale.act(action)
+        return reward
+
+    def get_gamescreen(self, converted=True):
+        self.gamescreen = self.ale.getScreenGrayscale(self.gamescreen)
+
+        if converted:
+            # convert ALE gamescreen into 84x84 image
+            processedImg = imresize(self.gamescreen[33:-16, :, 0], 0.525, interp='nearest')
+            return processedImg
+        else:
+            # we return a copy here because converted returns a copy also. And its easier for exp replay
+            return np.copy(self.gamescreen)
+
+    def get_game_over(self):
+        return self.ale.game_over()
+
+    def get_legal_actions(self):
+        return self.ale.getMinimalActionSet()
+    
