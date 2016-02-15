@@ -6,12 +6,12 @@ from learningALE.learners.DQN import DQNTester
 
 
 # setup vars
-rom = b'D:\\_code\\breakout.bin'
-gamename = 'breakout'
+rom = b'D:\\_code\\montezuma_revenge.bin'
+gamename = 'montezumas_revenge'
 skip_frame = 4
-num_actions = 4
+num_actions = 18
 learner = DQNTester(skip_frame, num_actions,
-                    load='D:\_code\learningALE\experiments\\reproduction\DQN_Original\dqnbest36.0.pkl',
+                    load='D:\_code\learningALE\experiments\\novelty\dqn2500572.0.pkl',
                     rand_val=0.05)
 
 st = time.time()
