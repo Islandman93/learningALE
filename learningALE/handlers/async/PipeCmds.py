@@ -6,8 +6,7 @@ class PipeCmds(Enum):
     Start = 1
     End = 2
     HostSendingGlobalParameters = 3
-    HostSendingGlobalTarget = 4
 
     # client commands
-    ClientSendingGradients = 5
-    ClientSendingSteps = 6
+    ClientSendingGradientsSteps = 4
+    ClientSendingStats = 5

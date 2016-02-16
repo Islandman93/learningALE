@@ -40,9 +40,10 @@ class AsyncTargetCNN:
         w4_update = T.matrix()
         b4_update = T.vector()
         network_updates = [w1_update, b1_update, w2_update, b2_update, w3_update, b3_update, w4_update, b4_update]
-        theano_updates = OrderedDict()
-        for param, update in zip(params, network_updates):
-            theano_updates[param] = param - 0.001 * update
+        theano_updates = lasagne.updates.rmsprop(network_updates, params, 0.0001)
+        # theano_updates = OrderedDict()
+        # for param, update in zip(params, network_updates):
+        #     theano_updates[param] = param - 0.0001 * update
 
         self.get_grads = theano.function([self.l_in.input_var, action, reward, terminal, state_tp1], grads, allow_input_downcast=True)
         self.get_loss = theano.function([self.l_in.input_var, action, reward, terminal, state_tp1], loss, allow_input_downcast=True)

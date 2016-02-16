@@ -11,11 +11,10 @@ def main():
 
     from functools import partial
 
-    learner_count = 2
-    learners = list()
-
     cnn = AsyncTargetCNN((1, 4, 84, 84), num_actions)
 
+    learner_count = 16
+    learners = list()
     for learner in range(learner_count):
         learners.append(partial(Async1StepDQNLearner, num_actions, cnn.get_parameters()))
 
@@ -23,7 +22,7 @@ def main():
 
     import time
     st = time.time()
-    multiprochandler.start()
+    multiprochandler.run(50)
     multiprochandler.block_until_done()
     et = time.time()
     print('total time', et-st)
