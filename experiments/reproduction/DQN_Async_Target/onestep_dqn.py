@@ -22,11 +22,12 @@ def main():
 
     import time
     st = time.time()
-    multiprochandler.run(50)
+    multiprochandler.run(20)
     multiprochandler.block_until_done()
     et = time.time()
     print('total time', et-st)
+    return multiprochandler
 
 # python needs this to run processes
 if __name__ == '__main__':
-    main()
+    host = main()

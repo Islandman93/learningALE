@@ -3,6 +3,8 @@ from learningALE.handlers.gamehandler import MinimalGameHandler
 from onestep_dqn_client import Async1StepQLearnerProcess
 from functools import partial
 from learningALE.handlers.async.PipeCmds import PipeCmds
+import numpy as np
+import matplotlib.pyplot as plt
 import time
 import pickle
 
@@ -35,77 +37,91 @@ class Async1StepQLearnerHost:
         # setup learners and emulators
         self.learner_pipes = list()
         self.learner_processes = list()
-        self.learner_steps = list()
-        self.learner_update_target_flag = list()
+        self.learner_frames = list()
         self.learner_stats = list()
         for learner_partial in learners:
             # create pipe
             parent_conn, child_conn = Pipe()
 
             # create and start child process to run constructors
-            learner_process = Async1StepQLearnerProcess(args=(child_conn, learner_partial, game_handler_partial))
+            learner_process = Async1StepQLearnerProcess(args=(child_conn, learner_partial, game_handler_partial), daemon=True)
             learner_process.start()
 
             self.learner_pipes.append(parent_conn)
             self.learner_processes.append(learner_process)
-            self.learner_steps.append(0)
-            self.learner_update_target_flag.append(False)
+            self.learner_frames.append(0)
             self.learner_stats.append(list())
 
-    def run(self, epochs=10):
+        self.best_score = 0
+
+    def run(self, epochs=1, show_status=True):
         ep_count = 0
         for learner in self.learner_pipes:
             learner.send(PipeCmds.Start)
 
         st = time.time()
-        while sum(self.learner_steps) < epochs * 50000:  # 50000 updates is defined as an epoch
+        while sum(self.learner_frames) < epochs * 4000000:  # 4000000 frames is defined as an epoch
             for learner_ind, learner in enumerate(self.learner_pipes):
                 if learner.poll():
                     self.process_pipe(learner_ind, learner)
-            if sum(self.learner_steps) >= ep_count * 25000 and len(self.learner_stats[-1]) > 0:
-                self.print_status(st)
-                with open('async1stepdqn{0}.pkl'.format(sum(self.learner_steps)), 'wb') as out_file:
+
+            if sum(self.learner_frames) >= ep_count * 4000000:
+                with open('async1stepdqn{0}.pkl'.format(sum(self.learner_frames)), 'wb') as out_file:
                     pickle.dump(self.cnn.get_parameters(), out_file)
-                ep_count += 0.5
+                ep_count += 0.1
+                if show_status:
+                    self.print_status(st)
 
     def process_pipe(self, learner_ind, pipe):
         pipe_cmd, extras = pipe.recv()
         if pipe_cmd == PipeCmds.ClientSendingGradientsSteps:
             self.cnn.gradient_step(extras[0])
-            self.learner_steps[learner_ind] = extras[1]
-
-            update_target = self.check_update_target(learner_ind)
+            self.learner_frames[learner_ind] = extras[1]
             # send back new parameters to client
-            pipe.send((PipeCmds.HostSendingGlobalParameters, (self.cnn.get_parameters(), update_target)))
+            pipe.send((PipeCmds.HostSendingGlobalParameters,
+                       (self.cnn.get_parameters(), {'counter': sum(self.learner_frames)})))
         if pipe_cmd == PipeCmds.ClientSendingStats:
             self.learner_stats[learner_ind].append(extras)
+            if extras['score'] > self.best_score:
+                self.best_score = extras['score']
 
     def print_status(self, st):
-        frames = 0
-        for learner_stat in self.learner_stats:
+        plt.clf()
+        for learner_ind, learner_stat in enumerate(self.learner_stats):
             if len(learner_stat) > 0:
-                frames += learner_stat[-1]['frames']
+                scores = list()
+                loss = list()
+                for learner in learner_stat:
+                    scores.append(learner['score'])
+                    loss += learner['loss']
+
+                plt.subplot(len(self.learner_processes), 2, (learner_ind * 2) + 1)
+                plt.plot(scores, '.')
+                plt.ylim([0, max(scores)])
+                plt.subplot(len(self.learner_processes), 2, (learner_ind * 2) + 2)
+                plt.plot(loss, '.')
+                plt.ylim([0, np.percentile(loss, 90)])
         et = time.time()
         print('==== Status Report ====')
-        print('Epoch:', round(float(sum(self.learner_steps)) / 50000, 1))
+        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # 4000000 frames is defined as an epoch
         print('Time:', et-st)
-        print('Frames:', frames)
-        print('FPS:', frames/(et-st))
+        print('Frames:', sum(self.learner_frames))
+        print('FPS:', sum(self.learner_frames)/(et-st))
+        print('Best score:', self.best_score)
         print('=======================')
-
-    def check_update_target(self, learner_ind):
-        if sum(self.learner_steps) % self.target_update == 0:
-            for ind in range(len(self.learner_update_target_flag)):
-                self.learner_update_target_flag[ind] = True
-        update_target = self.learner_update_target_flag[learner_ind]
-        self.learner_update_target_flag[learner_ind] = False
-        return update_target
+        plt.ion()
+        plt.show()
+        plt.pause(0.01)
+        plt.ioff()
 
     def block_until_done(self):
         self.end_processes()
         for learner in self.learner_processes:
-            learner.join()
+            if not learner.join(5):
+                print("Can't join learner", learner)
 
     def end_processes(self):
         for learner in self.learner_pipes:
+            # send command twice just in case
+            learner.send((PipeCmds.End, None))
             learner.send((PipeCmds.End, None))
