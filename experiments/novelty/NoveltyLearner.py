@@ -1,7 +1,8 @@
-from learningALE.handlers.actionhandler import ActionHandler, ActionPolicy
-from learningALE.handlers.dataset import DataSet
-from learningALE.learners.nns import CNN
 import numpy as np
+
+from learningALE.handlers.actionhandler import ActionHandler, ActionPolicy
+from learningALE.handlers.experience_replay.dataset import DataSet
+from learningALE.learners.nns import CNN
 
 
 class NoveltyLearner():
