@@ -8,6 +8,13 @@ import numpy as np
 
 from learningALE.handlers.ale_specific.gamehandler import MinimalGameHandler
 from learningALE.handlers.async.PipeCmds import PipeCmds
+<<<<<<< HEAD:learningALE/handlers/async/AsyncHost.py
+=======
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import pickle
+>>>>>>> 55d96c30240a1eb42b6601e59e6dc775f0eec466:experiments/reproduction/DQN_Async_Target/onestep_dqn_host.py
 
 
 class AsyncLearnerHost:
@@ -47,7 +54,11 @@ class AsyncLearnerHost:
             parent_conn, child_conn = Pipe()
 
             # create and start child process to run constructors
+<<<<<<< HEAD:learningALE/handlers/async/AsyncHost.py
             learner_process = process(args=(child_conn, learner_partial, game_handler_partial), daemon=True)
+=======
+            learner_process = Async1StepQLearnerProcess(args=(child_conn, learner_partial, game_handler_partial), daemon=True)
+>>>>>>> 55d96c30240a1eb42b6601e59e6dc775f0eec466:experiments/reproduction/DQN_Async_Target/onestep_dqn_host.py
             learner_process.start()
 
             self.learner_pipes.append(parent_conn)
@@ -89,11 +100,9 @@ class AsyncLearnerHost:
                 self.best_score = extras['score']
 
     def print_status(self, st):
-        frames = 0
         plt.clf()
         for learner_ind, learner_stat in enumerate(self.learner_stats):
             if len(learner_stat) > 0:
-                frames += self.learner_frames[learner_ind]
                 scores = list()
                 loss = list()
                 for learner in learner_stat:
@@ -108,10 +117,10 @@ class AsyncLearnerHost:
                 plt.ylim([0, np.percentile(loss, 90)])
         et = time.time()
         print('==== Status Report ====')
-        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # epoch defined as 4 million frames
+        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # 4000000 frames is defined as an epoch
         print('Time:', et-st)
-        print('Frames:', frames)
-        print('FPS:', frames/(et-st))
+        print('Frames:', sum(self.learner_frames))
+        print('FPS:', sum(self.learner_frames)/(et-st))
         print('Best score:', self.best_score)
         print('=======================')
         plt.ion()
