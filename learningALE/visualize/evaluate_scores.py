@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
-from learningALE.visualize.evaluate_player import evaluate_player
+
+from learningALE.handlers.ale_specific.gamehandler import GameHandler
 from learningALE.learners.DQN import DQNTester
-from learningALE.handlers.gamehandler import GameHandler
+from learningALE.visualize.evaluate_player import evaluate_player
 
 os.chdir('D:\_code\learningALE\experiments\\reproduction\DQN_Original')
 

@@ -42,7 +42,7 @@ def test_anneal(action_handler: ActionHandler):
     action_handler.anneal()
     action_handler.anneal()
     assert action_handler.randVal == 0.1
-    assert action_handler.randVal == action_handler.lowestRandVal
+    assert action_handler.randVal == action_handler.lowest_rand_val
 
 
 def test_rand_vals():

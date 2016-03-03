@@ -1,6 +1,6 @@
-from learningALE.handlers.threadedgamehandler import ThreadedGameHandler
-from learningALE.learners.DQN import DQNLearner
 import numpy as np
+
+from learningALE.handlers.ale_specific.threadedgamehandler import ThreadedGameHandler
 
 
 class randomAgent():

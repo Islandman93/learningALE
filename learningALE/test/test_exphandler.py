@@ -1,6 +1,7 @@
-import pytest
-from learningALE.handlers.experiencehandler import ExperienceHandler
 import numpy as np
+import pytest
+
+from learningALE.handlers.experience_replay.experiencehandler import ExperienceHandler
 
 
 @pytest.fixture(scope='module')

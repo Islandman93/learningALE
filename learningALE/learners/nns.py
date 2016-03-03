@@ -132,97 +132,6 @@ class SPPLayer(lasagne.layers.Layer):
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], input_shape[1], 21)
 
-class AlloEggoCnn:
-    def __init__(self, inpShape, outputNum, clip):
-        self.input = T.tensor4()
-        # allocentric lasagne setup
-        self.a_in = lasagne.layers.InputLayer(inpShape, input_var=self.input)
-        self.a_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_in, 16, (8, 8))
-        self.a_pool1 = lasagne.layers.MaxPool2DLayer(self.a_hid1, 2)
-        self.a_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.a_pool1, 32, (4, 4))
-        self.a_spp = SPPLayer(self.a_hid2)
-        self.a_hid3 = lasagne.layers.DenseLayer(self.a_spp, 256)
-        self.a_out = lasagne.layers.DenseLayer(self.a_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear)
-
-        # egocentric lasagne setup
-        self.e_input = self.input[:, :, 43:, :]
-        self.l_in = lasagne.layers.InputLayer((inpShape[0], inpShape[1], 43, 80), input_var=self.e_input)
-        self.l_hid1 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_in, 16, (8, 8), W=self.a_hid1.W, b=self.a_hid1.b)
-        self.l_pool1 = lasagne.layers.MaxPool2DLayer(self.l_hid1, 2)
-        self.l_hid2 = lasagne.layers.dnn.Conv2DDNNLayer(self.l_pool1, 32, (4, 4), W=self.a_hid2.W, b=self.a_hid2.b)
-        self.l_spp = SPPLayer(self.l_hid2)
-        self.l_hid3 = lasagne.layers.DenseLayer(self.l_spp, 256, W=self.a_hid3.W, b=self.a_hid3.b)
-        self.e_out = lasagne.layers.DenseLayer(self.l_hid3, outputNum, nonlinearity=lasagne.nonlinearities.linear,
-                                               W=self.a_out.W, b=self.a_out.b)
-
-        allo_output = lasagne.layers.get_output(self.a_out)
-        ego_output = lasagne.layers.get_output(self.e_out)
-
-        self.target = T.matrix()
-        self.mask = T.matrix()
-
-        allo_loss = T.mean(((self.target - allo_output)*self.mask)**2)
-        ego_loss = T.mean(((self.target - ego_output)*self.mask)**2)
-        loss = (allo_loss + ego_loss)/2
-        # loss = ego_loss
-
-        params = lasagne.layers.get_all_params(self.a_out)
-        grads = lasagne.updates.total_norm_constraint(T.grad(loss, params), clip)
-        update = lasagne.updates.rmsprop(grads, params, 0.002)
-        self.train = theano.function([self.input, self.target, self.mask], loss, updates=update)
-        self.get_output = theano.function([self.input], outputs=(allo_output+ego_output)/2)
-        # self.get_output = theano.function([self.input], outputs=(ego_output))
-
-
-class LSTM:
-    def __init__(self, inpShape, outputNum, clip):
-        num_units = 256
-        # By setting the first two dimensions as None, we are allowing them to vary
-        # They correspond to batch size and sequence length, so we will be able to
-        # feed in batches of varying size with sequences of varying length.
-        self.l_inp = InputLayer(inpShape)
-        # We can retrieve symbolic references to the input variable's shape, which
-        # we will later use in reshape layers.
-        batchsize, seqlen, _ = self.l_inp.input_var.shape
-        self.l_lstm = LSTMLayer(self.l_inp, num_units=num_units)
-        # In order to connect a recurrent layer to a dense layer, we need to
-        # flatten the first two dimensions (our "sample dimensions"); this will
-        # cause each time step of each sequence to be processed independently
-        l_shp = ReshapeLayer(self.l_lstm, (-1, num_units))
-        self.l_dense = DenseLayer(l_shp, num_units=outputNum)
-        # To reshape back to our original shape, we can use the symbolic shape
-        # variables we retrieved above.
-        self.l_out = ReshapeLayer(self.l_dense, (batchsize, seqlen, outputNum))
-
-        net_output = lasagne.layers.get_output(self.l_out)
-        truth = T.tensor3()
-        mask = T.tensor3()
-        loss = T.mean(mask*(net_output-truth)**2)
-
-        params = lasagne.layers.get_all_params(self.l_out)
-        grads = lasagne.updates.total_norm_constraint(T.grad(loss, params), clip)
-        update = lasagne.updates.rmsprop(grads, params, 0.002)
-
-        self.train = theano.function([self.l_inp.input_var, truth, mask], loss, updates=update)
-        self.get_output = theano.function([self.l_inp.input_var], outputs=net_output)
-
-
-class RAM:
-    def __init__(self):
-        self.l_in = lasagne.layers.InputLayer((None, 128*4))
-        self.l_hid1 = lasagne.layers.DenseLayer(self.l_in, 1024)
-        self.l_hid2 = lasagne.layers.DenseLayer(self.l_hid1, 256)
-        self.l_out = lasagne.layers.DenseLayer(self.l_hid2, 3, nonlinearity=lasagne.nonlinearities.linear)
-
-        net_output = lasagne.layers.get_output(self.l_out)
-
-        objective = lasagne.objectives.MaskedObjective(self.l_out)
-        loss = objective.get_loss()
-
-        params = lasagne.layers.get_all_params(self.l_out)
-        update = lasagne.updates.rmsprop(loss, params, 0.0002)
-        self.train = theano.function([self.l_in.input_var, objective.target_var, objective.mask_var], loss, updates=update)
-        self.get_output = theano.function([self.l_in.input_var], outputs=net_output)
 
 class AlloEggoSeperateCnn:
     def __init__(self):
@@ -273,7 +182,7 @@ class AlloEggoSeperateCnn:
         self.get_output = theano.function([self.input], outputs=(allo_output+ego_output)/2)
         # self.get_output = theano.function([self.input], outputs=(ego_output))
 
-def create_NIPS(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
+def create_NIPS_Sprag_init(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
     import theano.tensor.signal.conv
     from theano.sandbox.cuda import dnn
     # if no dnn support use default conv
@@ -304,9 +213,17 @@ def create_NIPS(inp_shape, output_num, stride=None, untie_biases=False, input_va
 
     return {'l_in': l_in, 'l_hid1': l_hid1, 'l_hid2': l_hid2, 'l_hid3': l_hid3, 'l_out': l_out}
 
-def create_Async(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
-    import lasagne.layers.conv
-    conv = lasagne.layers.conv.Conv2DLayer
+
+def create_NIPS(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
+    import theano.tensor.signal.conv
+    from theano.sandbox.cuda import dnn
+    # if no dnn support use default conv
+    if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+        import lasagne.layers.conv
+        conv = lasagne.layers.conv.Conv2DLayer
+    else:
+        import lasagne.layers.dnn
+        conv = lasagne.layers.dnn.Conv2DDNNLayer
     
     # setup network layout
     l_in = lasagne.layers.InputLayer(inp_shape, input_var=input_var)
@@ -319,3 +236,28 @@ def create_Async(inp_shape, output_num, stride=None, untie_biases=False, input_v
     l_out = lasagne.layers.DenseLayer(l_hid3, output_num, nonlinearity=lasagne.nonlinearities.linear)
 
     return {'l_in': l_in, 'l_hid1': l_hid1, 'l_hid2': l_hid2, 'l_hid3': l_hid3, 'l_out': l_out}
+
+
+def create_A3C(inp_shape, output_num, stride=None, untie_biases=False, input_var=None):
+    import theano.tensor.signal.conv
+    from theano.sandbox.cuda import dnn
+    # if no dnn support use default conv
+    if not theano.config.device.startswith("gpu") or not dnn.dnn_available():  # code stolen from lasagne dnn.py
+        import lasagne.layers.conv
+        conv = lasagne.layers.conv.Conv2DLayer
+    else:
+        import lasagne.layers.dnn
+        conv = lasagne.layers.dnn.Conv2DDNNLayer
+
+    # setup network layout
+    l_in = lasagne.layers.InputLayer(inp_shape, input_var=input_var)
+    l_hid1 = conv(l_in, 16, (8, 8), stride=stride[0], untie_biases=untie_biases)
+
+    l_hid2 = conv(l_hid1, 32, (4, 4), stride=stride[1], untie_biases=untie_biases)
+
+    l_hid3 = lasagne.layers.DenseLayer(l_hid2, 256)
+
+    l_value = lasagne.layers.DenseLayer(l_hid3, 1, nonlinearity=lasagne.nonlinearities.linear)
+    l_policy = lasagne.layers.DenseLayer(l_hid3, output_num, nonlinearity=lasagne.nonlinearities.softmax)
+
+    return {'l_in': l_in, 'l_hid1': l_hid1, 'l_hid2': l_hid2, 'l_hid3': l_hid3, 'l_value': l_value, 'l_policy': l_policy}

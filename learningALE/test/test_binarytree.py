@@ -1,5 +1,6 @@
 import pytest
-from learningALE.handlers.binarytree import Node, BinaryTree
+
+from learningALE.handlers.prioritized.binarytree import Node, BinaryTree
 
 
 @pytest.fixture(scope='module')

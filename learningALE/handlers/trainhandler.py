@@ -1,5 +1,6 @@
 import numpy as np
-from learningALE.handlers.prioritizedexperiencehandler import PrioritizedExperienceHandler
+
+from learningALE.handlers.prioritized.prioritizedexperiencehandler import PrioritizedExperienceHandler
 
 
 class TrainHandler:

@@ -1,6 +1,8 @@
-import pytest
-from learningALE.handlers.prioritizedexperiencehandler import PrioritizedExperienceHandler
 import numpy as np
+import pytest
+
+from learningALE.handlers.prioritized.prioritizedexperiencehandler import PrioritizedExperienceHandler
+
 
 # prioritized experience handler uses base experience handler, so just test what's different
 @pytest.fixture(scope='module')

@@ -1,5 +1,20 @@
 __author__ = 'Ben'
 import numpy as np
+from enum import Enum
+
+
+class ActionPolicy(Enum):
+    """
+    :class:`ActionPolicy` is an Enum used to determine which policy an action handler should use for
+    random exploration.
+
+    Currently supported are eGreedy and the addition of random values to the action vector (randVals)
+
+    The idea behind adding random values can be found here:
+    https://studywolf.wordpress.com/2012/11/25/reinforcement-learning-q-learning-and-exploration/
+    """
+    eGreedy = 1
+    randVals = 2
 
 
 class ActionHandler:
@@ -21,18 +36,19 @@ class ActionHandler:
        format: (Initial random value, ending random value, number of steps to anneal over)
 
     actions : tuple, list, array
-       Default None, should be set by gameHandler.
+       Default None, should be set by calling set_legal_actions.
        The legal actions from the :class:`libs.ale_python_interface.ALEInterface`
     """
-    def __init__(self, action_policy, random_values, actions=None):
-        self.actionPolicy = action_policy
+    def __init__(self, random_values: tuple, action_policy=ActionPolicy.eGreedy, actions=None):
+        self.action_policy = action_policy
 
-        self.randVal = random_values[0]
-        self.lowestRandVal = random_values[1]
+        self.highest_rand_val = random_values[0]
+        self.lowest_rand_val = random_values[1]
         lin = np.linspace(random_values[0], random_values[1], random_values[2])
+        self.curr_rand_val = self.highest_rand_val
         self.diff = lin[0] - lin[1]
-        self.countRand = 0
-        self.actionCount = 0
+        self.rand_count = 0
+        self.action_count = 0
 
         if actions is not None:
             self.numActions = len(actions)
@@ -62,17 +78,17 @@ class ActionHandler:
             Index of max action value.
         """
         if random:
-            if self.actionPolicy == ActionPolicy.eGreedy:
+            if self.action_policy == ActionPolicy.eGreedy:
                 # egreedy policy to choose random action_values
-                if np.random.uniform(0, 1) <= self.randVal:
+                if np.random.uniform(0, 1) <= self.curr_rand_val:
                     e_greedy = np.random.randint(self.numActions)
                     action_values[e_greedy] = np.inf  # set this value as the max action
-                    self.countRand += 1
-            elif self.actionPolicy == ActionPolicy.randVals:
-                action_values += np.random.randn(self.numActions) * self.randVal
+                    self.rand_count += 1
+            elif self.action_policy == ActionPolicy.randVals:
+                action_values += np.random.randn(self.numActions) * self.curr_rand_val
 
         action = np.argmax(action_values)
-        self.actionCount += 1
+        self.action_count += 1
 
         return action
 
@@ -80,9 +96,22 @@ class ActionHandler:
         """
         Anneals the random value used in the stochastic action selection policy.
         """
-        self.randVal -= self.diff
-        if self.randVal < self.lowestRandVal:
-            self.randVal = self.lowestRandVal
+        self.curr_rand_val -= self.diff
+        if self.curr_rand_val < self.lowest_rand_val:
+            self.curr_rand_val = self.lowest_rand_val
+
+    def anneal_to(self, anneal_count):
+        """
+        Anneals the random value to a specific step.
+
+        Parameters
+        ----------
+        anneal_count : int
+            Step count to anneal to
+        """
+        self.curr_rand_val = self.highest_rand_val - self.diff * anneal_count
+        if self.curr_rand_val < self.lowest_rand_val:
+            self.curr_rand_val = self.lowest_rand_val
 
     def set_legal_actions(self, legal_actions):
         """
@@ -131,17 +160,12 @@ class ActionHandler:
         """
         return self.actions[self.get_action(action_vect, random)]
 
-
-from enum import Enum
-class ActionPolicy(Enum):
-    """
-    :class:`ActionPolicy` is an Enum used to determine which policy an action handler should use for
-    random exploration.
-
-    Currently supported are eGreedy and the addition of random values to the action vector (randVals)
-
-    The idea behind adding random values can be found here:
-    https://studywolf.wordpress.com/2012/11/25/reinforcement-learning-q-learning-and-exploration/
-    """
-    eGreedy = 1
-    randVals = 2
+    def get_random(self):
+        if self.action_policy == ActionPolicy.eGreedy:
+            # egreedy policy to choose random action_values
+            if np.random.uniform(0, 1) <= self.curr_rand_val:
+                e_greedy = np.random.randint(self.numActions)
+                self.rand_count += 1
+                return True, self.actions[e_greedy]
+            else:
+                return False, None

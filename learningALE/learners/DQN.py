@@ -1,9 +1,9 @@
-from learningALE.learners.learner import learner
-from learningALE.handlers.actionhandler import ActionHandler, ActionPolicy
-from learningALE.handlers.experiencehandler import ExperienceHandler
-from learningALE.handlers.dataset import DataSet
-from learningALE.learners.nns import CNN
 import numpy as np
+
+from learningALE.handlers.actionhandler import ActionHandler, ActionPolicy
+from learningALE.handlers.experience_replay.dataset import DataSet
+from learningALE.learners.learner import learner
+from learningALE.learners.nns import CNN
 
 
 class DQNLearner(learner):
@@ -11,7 +11,7 @@ class DQNLearner(learner):
         super().__init__()
 
         rand_vals = (1, 0.1, 1000000)  # starting at 1 anneal eGreedy policy to 0.1 over 1,000,000 actions
-        self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
+        self.action_handler = ActionHandler(rand_vals)
 
         self.minimum_replay_size = 100
         self.exp_handler = DataSet(84, 84, random_state, max_steps=1000000, phi_length=skip_frame)
@@ -62,7 +62,7 @@ class DQNLearner(learner):
 class DQNTester:
     def __init__(self, skip_frame, num_actions, load, rand_val=0.05):
         rand_vals = (rand_val, rand_val, 2)
-        self.action_handler = ActionHandler(ActionPolicy.eGreedy, rand_vals)
+        self.action_handler = ActionHandler(rand_vals)
         self.cnn = CNN((None, skip_frame, 84, 84), num_actions, 1)
         self.cnn.load(load)
         self.q_vals = list()

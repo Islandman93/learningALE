@@ -1,9 +1,7 @@
 import time
-import matplotlib.pyplot as plt
-import numpy as np
-from learningALE.handlers.gamehandler import GameHandler
-from learningALE.learners.DQN import DQNTester
 
+from learningALE.handlers.ale_specific.gamehandler import GameHandler
+from learningALE.learners.DQN import DQNTester
 
 # setup vars
 rom = b'D:\\_code\\montezuma_revenge.bin'

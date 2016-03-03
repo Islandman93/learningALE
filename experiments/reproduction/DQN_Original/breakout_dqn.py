@@ -1,9 +1,10 @@
 import time
+
 import matplotlib.pyplot as plt
 import numpy as np
-from learningALE.handlers.gamehandler import GameHandler
-from learningALE.learners.DQN import DQNLearner
 
+from learningALE.handlers.ale_specific.gamehandler import GameHandler
+from learningALE.learners.DQN import DQNLearner
 
 # setup vars
 rom = b'D:\\_code\\breakout.bin'

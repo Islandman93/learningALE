@@ -1,7 +1,8 @@
 import threading
 from queue import Queue
 
-from learningALE.handlers.gamehandler import GameHandler
+from learningALE.handlers.ale_specific.gamehandler import GameHandler
+
 
 class ThreadedGameHandler:
     """

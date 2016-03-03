@@ -1,6 +1,7 @@
-from learningALE.handlers.multiproclearninghandler import MultiprocLearningHandler
-from learningALE.learners.DQN import DQNLearner
 import numpy as np
+
+from learningALE.handlers.ale_specific.multiproclearninghandler import MultiprocLearningHandler
+from learningALE.learners.DQN import DQNLearner
 
 
 class randomAgent():

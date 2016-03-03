@@ -1,8 +1,8 @@
-from multiprocessing import Process, Pipe
-import threading
-from learningALE.handlers.gamehandler import GameHandler
 from functools import partial
-import copy
+from multiprocessing import Process, Pipe
+
+from learningALE.handlers.ale_specific.gamehandler import GameHandler
+
 
 class MultiprocLearningHandler:
     """

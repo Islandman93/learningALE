@@ -135,12 +135,15 @@ class MinimalGameHandler:
     ----------
     rom : byte string
         Specifies the directory to load the rom from. Must be a byte string: b'dir_for_rom/rom.bin'
+    frame_skip : int
+        Default 4. Number of frames to skip inbetween action. This sets frame skip on the Stella environment
     show_rom : boolean
         Default False. Whether or not to show the game. True takes longer to run but can be fun to watch
     """
-    def __init__(self, rom, show_rom=False):
+    def __init__(self, rom, frame_skip=4, show_rom=False):
         # set up emulator
         self.ale = ALEInterface(show_rom)
+        self.ale.setInt(b'frame_skip', frame_skip)
         self.ale.loadROM(rom)
 
         # setup gamescreen object. I think this is faster than recreating an empty each time
@@ -150,13 +153,12 @@ class MinimalGameHandler:
     def reset(self):
         self.ale.reset_game()
 
-    def step(self, action, skip_frame=1, clip=None):
+    def step(self, action, clip=None):
         reward = 0
-        for frame in range(skip_frame):
-            if clip is not None:
-                reward += np.clip(self.ale.act(action), 0, clip)
-            else:
-                reward += self.ale.act(action)
+        if clip is not None:
+            reward += np.clip(self.ale.act(action), 0, clip)
+        else:
+            reward += self.ale.act(action)
         return reward
 
     def get_gamescreen(self, converted=True):
