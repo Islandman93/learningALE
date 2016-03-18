@@ -9,7 +9,6 @@ class NoveltyHost(AsyncLearnerHost):
         self.novel_states = Manager().dict()
         super().__init__(host_cnn, learners, rom, skip_frame, show_rom, additional_process_args=self.novel_states)
 
-
     def process_pipe(self, learner_ind, pipe):
         pipe_cmd, extras = pipe.recv()
         if pipe_cmd == PipeCmds.ClientSendingGradientsSteps:
@@ -25,17 +24,10 @@ class NoveltyHost(AsyncLearnerHost):
             if extras['score'] > self.best_score:
                 self.best_score = extras['score']
 
-    # def process_novel_frames(self, new_novel_frames):
-    #     for state, count in new_novel_frames.items():
-    #         if state in self.novel_states:
-    #             self.novel_states[state] += count
-    #         else:
-    #             self.novel_states[state] = count
-
     def print_status(self, st):
         et = time.time()
         print('==== Status Report ====')
-        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # 4000000 frames is defined as an epoch
+        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 2))  # 4000000 frames is defined as an epoch
         print('Time:', et-st)
         print('Frames:', sum(self.learner_frames))
         print('FPS:', sum(self.learner_frames)/(et-st))

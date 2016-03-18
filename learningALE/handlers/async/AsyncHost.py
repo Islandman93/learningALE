@@ -104,7 +104,7 @@ class AsyncLearnerHost:
     def print_status(self, st):
         et = time.time()
         print('==== Status Report ====')
-        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # 4000000 frames is defined as an epoch
+        print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 2))  # 4000000 frames is defined as an epoch
         print('Time:', et-st)
         print('Frames:', sum(self.learner_frames))
         print('FPS:', sum(self.learner_frames)/(et-st))
