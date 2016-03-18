@@ -13,12 +13,21 @@ from ctypes import *
 import numpy as np
 from numpy.ctypeslib import as_ctypes
 import os
+import sys
 
 
 # Islandman93 edit: we need to change into the dir to load the other dll's on windows
 cwd = os.getcwd()
 os.chdir(os.path.dirname(__file__))
-ale_lib = cdll.LoadLibrary('ale_python_interface.dll')
+
+# check which operating system we are in
+if sys.platform.startswith('linux2'):
+    ale_lib = cdll.LoadLibrary('libale_c.so')
+elif sys.platform.startswith('win32'):
+    ale_lib = cdll.LoadLibrary('ale_python_interface.dll')
+else:
+    raise NotImplementedError('learningALE is not supported for your system. Got {0}, expected: linux2 or win32'
+                              .format(sys.platform))
 os.chdir(cwd)
 
 ale_lib.ALE_new.argtypes = None

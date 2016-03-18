@@ -1,20 +1,10 @@
-import pickle
-import time
 from functools import partial
 from multiprocessing import Pipe
-
-import matplotlib.pyplot as plt
-import numpy as np
-
 from learningALE.handlers.ale_specific.gamehandler import MinimalGameHandler
 from learningALE.handlers.async.PipeCmds import PipeCmds
-<<<<<<< HEAD:learningALE/handlers/async/AsyncHost.py
-=======
-import numpy as np
-import matplotlib.pyplot as plt
+import json
 import time
 import pickle
->>>>>>> 55d96c30240a1eb42b6601e59e6dc775f0eec466:experiments/reproduction/DQN_Async_Target/onestep_dqn_host.py
 
 
 class AsyncLearnerHost:
@@ -39,7 +29,7 @@ class AsyncLearnerHost:
     skip_frame : int
         Number of frames to skip using the last action chosen
     """
-    def __init__(self, host_cnn, learners, rom, skip_frame=4, show_rom=False):
+    def __init__(self, host_cnn, learners, rom, skip_frame=4, show_rom=False, additional_process_args=None):
         # create host cnn
         self.cnn = host_cnn
         # create partial function to create game handlers
@@ -54,11 +44,7 @@ class AsyncLearnerHost:
             parent_conn, child_conn = Pipe()
 
             # create and start child process to run constructors
-<<<<<<< HEAD:learningALE/handlers/async/AsyncHost.py
-            learner_process = process(args=(child_conn, learner_partial, game_handler_partial), daemon=True)
-=======
-            learner_process = Async1StepQLearnerProcess(args=(child_conn, learner_partial, game_handler_partial), daemon=True)
->>>>>>> 55d96c30240a1eb42b6601e59e6dc775f0eec466:experiments/reproduction/DQN_Async_Target/onestep_dqn_host.py
+            learner_process = process(args=(child_conn, learner_partial, game_handler_partial, additional_process_args), daemon=True)
             learner_process.start()
 
             self.learner_pipes.append(parent_conn)
@@ -68,7 +54,7 @@ class AsyncLearnerHost:
 
         self.best_score = 0
 
-    def run(self, epochs=1, show_status=True):
+    def run(self, epochs=1, save_interval=1, show_status=True):
         ep_count = 0
         for learner in self.learner_pipes:
             learner.send(PipeCmds.Start)
@@ -80,9 +66,25 @@ class AsyncLearnerHost:
                     self.process_pipe(learner_ind, learner)
 
             if sum(self.learner_frames) >= ep_count * 4000000:
+                ep_count += save_interval
+
+                # save network parms
                 with open('async_network_parameters{0}.pkl'.format(sum(self.learner_frames)), 'wb') as out_file:
                     pickle.dump(self.cnn.get_parameters(), out_file)
-                ep_count += 0.01
+
+                # save score and loss lists
+                learner_stats = {}
+                for learner_ind, learner_stat in enumerate(self.learner_stats):
+                    if len(learner_stat) > 0:
+                        scores = list()
+                        loss = list()
+                        for games in learner_stat:
+                            scores.append(int(games['score']))  # score is np.int which is not serializable
+                            loss += games['loss']
+                        learner_stats[learner_ind] = {'scores': scores, 'loss': loss}
+                with open('network_stats.json', 'w') as out_file:
+                    json.dump(learner_stats, out_file)
+
                 if show_status:
                     self.print_status(st)
 
@@ -100,21 +102,6 @@ class AsyncLearnerHost:
                 self.best_score = extras['score']
 
     def print_status(self, st):
-        plt.clf()
-        for learner_ind, learner_stat in enumerate(self.learner_stats):
-            if len(learner_stat) > 0:
-                scores = list()
-                loss = list()
-                for learner in learner_stat:
-                    scores.append(learner['score'])
-                    loss += learner['loss']
-
-                plt.subplot(len(self.learner_processes), 2, (learner_ind * 2) + 1)
-                plt.plot(scores, '.')
-                plt.ylim([0, max(scores)])
-                plt.subplot(len(self.learner_processes), 2, (learner_ind * 2) + 2)
-                plt.plot(loss, '.')
-                plt.ylim([0, np.percentile(loss, 90)])
         et = time.time()
         print('==== Status Report ====')
         print('Epoch:', round(float(sum(self.learner_frames)) / 4000000, 1))  # 4000000 frames is defined as an epoch
@@ -123,10 +110,6 @@ class AsyncLearnerHost:
         print('FPS:', sum(self.learner_frames)/(et-st))
         print('Best score:', self.best_score)
         print('=======================')
-        plt.ion()
-        plt.show()
-        plt.pause(0.01)
-        plt.ioff()
 
     def block_until_done(self):
         self.end_processes()

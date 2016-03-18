@@ -50,11 +50,11 @@ class AsyncClientProcess(Process):
     """
     def run(self):
         # access thread args from http://stackoverflow.com/questions/660961/overriding-python-threading-thread-run
-        pipe, learner_partial, emulator_partial = self._args
+        pipe, learner_partial, emulator_partial, additional_process_args = self._args
 
         # create learner and emulator
         emulator = emulator_partial()
-        learner = learner_partial(pipe)
+        learner = learner_partial(pipe, additional_args=additional_process_args)
         learner.set_legal_actions(emulator.get_legal_actions())
 
         # wait for start command

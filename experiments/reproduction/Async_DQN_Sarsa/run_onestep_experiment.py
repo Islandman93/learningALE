@@ -12,6 +12,9 @@ def main():
     num_actions = 4
     discount = 0.95
     sarsa = True
+    learner_count = 8
+    epochs = 15
+    status_interval = 0.001
 
     from functools import partial
 
@@ -20,7 +23,6 @@ def main():
     else:
         cnn = AsyncTargetCNN((1, 4, 84, 84), num_actions, discount)
 
-    learner_count = 8
     learners = list()
     for learner in range(learner_count):
         if sarsa:
@@ -34,7 +36,7 @@ def main():
 
     import time
     st = time.time()
-    host.run(15, show_status=True)
+    host.run(epochs, save_interval=status_interval, show_status=True)
     host.block_until_done()
     et = time.time()
     print('total time', et-st)

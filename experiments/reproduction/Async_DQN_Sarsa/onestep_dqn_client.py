@@ -39,7 +39,7 @@ class Async1StepDQNLearner(AsyncTargetLearner):
             # accumulate gradients
             loss = self.cnn.accumulate_gradients(self.frame_buffer, self.action_handler.game_action_to_action_ind(action),
                                           reward, self.frame_buffer_with(state_tp1), terminal)
-            self.loss_list.append(loss)
+            self.loss_list.append(float(loss))
 
             state = state_tp1
             self.thread_steps += 1
@@ -53,9 +53,8 @@ class Async1StepDQNLearner(AsyncTargetLearner):
                 self.cnn.clear_gradients()
                 self.cnn.set_parameters(new_params)
 
-                self.update_global_vars(global_vars)
                 self.action_handler.anneal_to(global_vars['counter'])
-                if self.check_update_target():
+                if self.check_update_target(global_vars['counter']):
                     print(self, 'setting target')
                     self.cnn.set_target_parameters(new_params)
 
@@ -65,50 +64,3 @@ class Async1StepDQNLearner(AsyncTargetLearner):
                     self.pipe.send((PipeCmds.ClientSendingStats, stats))
         print(self, 'ending episode. Step counter:', self.thread_steps,
               'Score:', total_score, 'Current Rand Val:', self.action_handler.curr_rand_val)
-
-    # @profile
-    def profile(self, emulator):
-        # run until broken by pipe end command from host
-        total_score = 0
-        # reset game
-        print(self, 'starting episode. Step counter:', self.thread_steps,
-              'Last score:', total_score, 'Current Rand Val:', self.action_handler.curr_rand_val)
-        emulator.reset()
-        self.game_over()
-        total_score = 0
-
-        # get initial state
-        state = np.asarray(emulator.get_gamescreen()/255.0, dtype=np.float32)
-
-        # run until terminal
-        terminal = False
-        while not terminal and not self.done:
-            # get action
-            action = self.get_game_action(state)
-
-            # step and get new state
-            reward = emulator.step(action, clip=1)
-            total_score += reward
-            state_tp1 = np.asarray(emulator.get_gamescreen()/255.0, dtype=np.float32)
-
-            # check for terminal
-            terminal = emulator.get_game_over()
-
-            # accumulate gradients
-            loss = self.cnn.accumulate_gradients(self.frame_buffer, self.action_handler.game_action_to_action_ind(action),
-                                          reward, self.frame_buffer_with(state_tp1), terminal)
-            self.loss_list.append(loss)
-
-            state = state_tp1
-            self.thread_steps += 1
-
-            if self.thread_steps % self.async_update_step == 0 or terminal:
-                # send accumulated grads
-                self.cnn.gradient_step(self.cnn.get_gradients())
-                self.cnn.clear_gradients()
-
-                self.update_global_vars({'counter': self.thread_steps*self.skip_frame})
-                if self.check_update_target():
-                    print(self, 'setting target')
-                    self.cnn.set_target_parameters(self.cnn.get_parameters())
-        print(self, 'Stopping')

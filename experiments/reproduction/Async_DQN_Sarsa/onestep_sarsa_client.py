@@ -42,7 +42,7 @@ class Async1StepSarsaLearner(AsyncTargetLearner):
             loss = self.cnn.accumulate_gradients(self.frame_buffer, self.action_handler.game_action_to_action_ind(action),
                                                  reward, self.action_handler.game_action_to_action_ind(action_tp1),
                                                  frame_buffer_tp1, terminal)
-            self.loss_list.append(loss)
+            self.loss_list.append(float(loss))
 
             # update loop vars
             self.frame_buffer = frame_buffer_tp1
@@ -61,9 +61,8 @@ class Async1StepSarsaLearner(AsyncTargetLearner):
                 self.cnn.clear_gradients()
                 self.cnn.set_parameters(new_params)
 
-                self.update_global_vars(global_vars)
                 self.action_handler.anneal_to(global_vars['counter'])
-                if self.check_update_target():
+                if self.check_update_target(global_vars['counter']):
                     print(self, 'setting target')
                     self.cnn.set_target_parameters(new_params)
 
