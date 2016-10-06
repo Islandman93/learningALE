@@ -1,8 +1,0 @@
-# PyCharm files
-.idea
-LearningALE.egg-info
-_build/
-*.pkl
-*.zip
-*.png
-__pycache__/
